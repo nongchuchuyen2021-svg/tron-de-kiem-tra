@@ -1,0 +1,13 @@
+require('./setup');
+const m = Matrix.fromText(SAMPLE.matrixText);
+console.log('matrix rows', m.rows.length, m.warnings, Matrix.totals(m.rows));
+const blocks = Readers.textToBlocks(SAMPLE.examText);
+const ex = ExamParser.parse(blocks);
+console.log('parts', ex.parts.map(p=>[p.id,p.name,p.type,p.headText.slice(0,30),p.intro.length]));
+console.log('numbering', ex.numbering, 'groups', JSON.stringify(ex.groups));
+console.log('meta', ex.meta, 'answerBlocks', ex.answerBlocks.length);
+ex.questions.forEach(q=>console.log(q.n,q.label,q.part,q.type,'opts',q.options.length,'stm',q.statements.length,'grp',q.group,'pts',q.points, JSON.stringify(q.flags), H.textOf(q.stem).slice(0,40)));
+const r = ExamParser.applyAnswers(ex.answerBlocks, ex);
+console.log(r);
+ex.questions.forEach(q=>console.log(q.n,q.type, q.type==='mcq'?q.options.findIndex(o=>o.id===q.answer):q.type==='tf'?q.statements.map(s=>s.answer).join(''):q.answer, H.textOf(q.guide).slice(0,50)));
+console.log(ex.warnings);

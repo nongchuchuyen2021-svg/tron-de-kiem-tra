@@ -1,0 +1,16 @@
+{
+  "name": "tron-de-kiem-tra",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Website trộn đề kiểm tra cho giáo viên (chạy hoàn toàn trên trình duyệt).",
+  "scripts": {
+    "start": "python -m http.server 8080",
+    "test": "node tests/test-core.js",
+    "tao-mau": "node tools/make-samples.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3",
+    "docx": "8.5.0",
+    "xlsx": "0.18.5"
+  }
+}

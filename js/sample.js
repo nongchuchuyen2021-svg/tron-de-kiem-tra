@@ -1,0 +1,146 @@
+/* Dữ liệu mẫu để dùng thử: ma trận + đề gốc + đáp án (Tin học 12). Nội dung do chương trình tự soạn để thử nghiệm. */
+(function (g) {
+  const T1 = 'CĐ1. Mạng máy tính và Internet';
+  const T2 = 'CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính';
+  const T3 = 'CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL';
+  const rows = [
+    ['Phần', 'Dạng câu hỏi', 'Chủ đề', 'Mức độ', 'Số câu', 'Điểm', 'Vị trí câu'],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T1, 'Biết', 3, '0,75', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T1, 'Hiểu', 1, '0,25', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T2, 'Biết', 2, '0,5', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T2, 'Hiểu', 1, '0,25', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T3, 'Biết', 1, '0,25', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T3, 'Hiểu', 2, '0,5', ''],
+    ['Phần I', 'Trắc nghiệm nhiều lựa chọn', T3, 'Vận dụng', 2, '0,5', ''],
+    ['Phần II', 'Trắc nghiệm đúng/sai', T1, 'Hiểu', 1, '1', ''],
+    ['Phần II', 'Trắc nghiệm đúng/sai', T2, 'Hiểu', 1, '1', ''],
+    ['Phần II', 'Trắc nghiệm đúng/sai', T3, 'Vận dụng', 1, '1', ''],
+    ['Phần III', 'Trả lời ngắn', T1, 'Biết', 1, '0,5', ''],
+    ['Phần III', 'Trả lời ngắn', T2, 'Hiểu', 1, '0,5', ''],
+    ['Phần III', 'Trả lời ngắn', T3, 'Biết', 1, '0,5', ''],
+    ['Phần III', 'Trả lời ngắn', T3, 'Vận dụng', 1, '0,5', ''],
+    ['Phần IV', 'Tự luận', T2, 'Vận dụng', 1, '1', ''],
+    ['Phần IV', 'Tự luận', T3, 'Vận dụng', 1, '1', ''],
+  ];
+
+  const exam = `TRƯỜNG THPT ABC
+ĐỀ KIỂM TRA GIỮA KÌ I – NĂM HỌC 2025-2026
+Môn: Tin học – Lớp 12
+Thời gian làm bài: 45 phút
+PHẦN I. Câu trắc nghiệm nhiều lựa chọn. Thí sinh trả lời từ câu 1 đến câu 12. Mỗi câu hỏi thí sinh chỉ chọn một phương án.
+Câu 1. Giao thức nào dưới đây được dùng để truyền tải các trang web?
+A. SMTP
+B. FTP
+C. HTTP
+D. DNS
+Câu 2. Địa chỉ IP phiên bản 4 (IPv4) gồm bao nhiêu bit?
+A. 16
+B. 32
+C. 64
+D. 128
+Câu 3. Thiết bị nào dưới đây dùng để kết nối các máy tính trong cùng một mạng cục bộ (LAN)?
+A. Màn hình
+B. Máy in
+C. Bàn phím
+D. Bộ chuyển mạch (Switch)
+Câu 4. Phát biểu nào sau đây về tên miền là đúng?
+A. Tên miền được dùng thay cho địa chỉ IP để người dùng dễ nhớ.
+B. Tên miền luôn là một dãy gồm bốn số.
+C. Tên miền chỉ được sử dụng trong mạng LAN.
+D. Mỗi máy tính chỉ có tên miền mà không có địa chỉ IP.
+Câu 5. Bước đầu tiên khi giải quyết một bài toán bằng máy tính là gì?
+A. Viết chương trình
+B. Kiểm thử chương trình
+C. Xác định bài toán (dữ liệu vào và kết quả ra)
+D. Triển khai sản phẩm
+Câu 6. Cấu trúc điều khiển nào cho phép lặp lại một công việc với số lần biết trước?
+A. Cấu trúc tuần tự
+B. Cấu trúc rẽ nhánh
+C. Câu lệnh gán
+D. Cấu trúc lặp for
+Câu 7. Cho dãy a = [3, 1, 2]. Sau khi sắp xếp tăng dần, dãy a là:
+A. [3, 2, 1]
+B. [1, 2, 3]
+C. [2, 1, 3]
+D. [1, 3, 2]
+Câu 8. Hệ quản trị cơ sở dữ liệu là gì?
+A. Phần mềm dùng để tạo lập, cập nhật và khai thác cơ sở dữ liệu.
+B. Thiết bị phần cứng dùng để lưu trữ dữ liệu.
+C. Một loại mạng máy tính.
+D. Một ngôn ngữ lập trình bậc cao.
+Sử dụng thông tin sau để trả lời câu 9 và câu 10:
+Bảng HOCSINH(MaHS, HoTen, Lop, Diem) lưu thông tin của 40 học sinh. Mỗi học sinh có một mã MaHS riêng.
+Câu 9. Trường nào nên được chọn làm khóa chính của bảng HOCSINH?
+A. HoTen
+B. Lop
+C. MaHS
+D. Diem
+Câu 10. Câu lệnh SQL nào dưới đây lấy họ tên của các học sinh lớp 12A1?
+A. DELETE HoTen FROM HOCSINH;
+B. SELECT HoTen FROM HOCSINH WHERE Lop = '12A1';
+C. UPDATE HOCSINH SET Lop = '12A1';
+D. SELECT * FROM Lop WHERE HOCSINH = '12A1';
+Câu 11. Để lọc các học sinh có điểm lớn hơn 8 trong bảng HOCSINH, ta dùng mệnh đề nào?
+A. ORDER BY Diem > 8
+B. GROUP BY Diem > 8
+C. WHERE Diem > 8
+D. FROM Diem > 8
+Câu 12. Xét các phát biểu về khóa chính:
+A. Khóa chính xác định duy nhất mỗi bản ghi trong bảng.
+B. Một bảng có thể có hai khóa chính.
+C. Giá trị khóa chính có thể trùng nhau giữa các bản ghi.
+D. A và B đều đúng.
+PHẦN II. Câu trắc nghiệm đúng sai. Thí sinh trả lời từ câu 13 đến câu 15. Trong mỗi ý a), b), c), d) ở mỗi câu, thí sinh chọn đúng hoặc sai.
+Câu 13. Một trường học thiết lập mạng LAN cho phòng máy tính. Xét tính đúng sai của các phát biểu sau:
+a) Switch giúp kết nối các máy tính trong cùng một mạng LAN.
+b) Địa chỉ IP của các máy trong mạng phải trùng nhau để giao tiếp được.
+c) Cáp xoắn đôi có thể được dùng để kết nối máy tính với switch.
+d) Mạng LAN chỉ dùng để chia sẻ tệp, không thể chia sẻ máy in.
+Câu 14. Cho đoạn chương trình Python sau: s = 0; for i in range(1, 5): s = s + i. Xét tính đúng sai của các phát biểu sau:
+a) Vòng lặp được thực hiện 4 lần.
+b) Giá trị cuối cùng của s là 10.
+c) Ở lần lặp cuối cùng, i nhận giá trị 5.
+d) Lệnh range(1, 5) sinh ra các số từ 1 đến 5.
+Câu 15. Cho bảng SANPHAM(MaSP, TenSP, Gia, SoLuong). Xét tính đúng sai của các phát biểu sau:
+a) MaSP phù hợp để làm khóa chính của bảng.
+b) Câu lệnh SELECT TenSP FROM SANPHAM WHERE Gia > 100; cho ra tên các sản phẩm có giá lớn hơn 100.
+c) Câu lệnh DELETE FROM SANPHAM; chỉ xóa bản ghi đầu tiên của bảng.
+d) Có thể thêm bản ghi mới vào bảng bằng câu lệnh INSERT.
+PHẦN III. Câu trắc nghiệm trả lời ngắn. Thí sinh trả lời từ câu 16 đến câu 19.
+Câu 16. Viết tên viết tắt (gồm 3 chữ cái) của giao thức dùng để truyền tệp giữa các máy tính trong mạng.
+Câu 17. Tính tổng S = 1 + 2 + 3 + 4 + 5. Kết quả bằng bao nhiêu?
+Câu 18. Từ khóa nào của SQL được dùng để truy vấn dữ liệu từ một bảng?
+Câu 19. Bảng HOCSINH có 40 bản ghi, trong đó có 10 bản ghi thuộc lớp 12A1. Sau khi thực hiện lệnh DELETE FROM HOCSINH WHERE Lop = '12A1'; bảng còn lại bao nhiêu bản ghi?
+PHẦN IV. Câu tự luận.
+Câu 20. (1,0 điểm) Viết chương trình Python nhập một số nguyên n và in ra tổng các số chẵn từ 1 đến n.
+Câu 21. (1,0 điểm) Cho bảng HOCSINH(MaHS, HoTen, Lop, Diem). Viết câu lệnh SQL để: a) lấy HoTen và Diem của các học sinh lớp 12A2 có Diem từ 8 trở lên; b) thêm một học sinh mới.
+--- HẾT ---
+ĐÁP ÁN VÀ HƯỚNG DẪN CHẤM
+PHẦN I
+1.C 2.B 3.D 4.A 5.C 6.D 7.B 8.A 9.C 10.B 11.C 12.A
+PHẦN II
+Câu 13: a) Đúng b) Sai c) Đúng d) Sai
+Câu 14: a) Đúng b) Đúng c) Sai d) Sai
+Câu 15: a) Đúng b) Đúng c) Sai d) Đúng
+PHẦN III
+Câu 16: FTP
+Câu 17: 15
+Câu 18: SELECT
+Câu 19: 30
+PHẦN IV
+Câu 20: (1,0 điểm)
+- Nhập n và chuyển sang kiểu số nguyên: 0,25 điểm.
+- Khởi tạo biến tổng và dùng vòng lặp duyệt từ 1 đến n: 0,25 điểm.
+- Kiểm tra số chẵn (i % 2 == 0) và cộng dồn vào tổng: 0,25 điểm.
+- In kết quả: 0,25 điểm.
+Câu 21: (1,0 điểm)
+- a) SELECT HoTen, Diem FROM HOCSINH WHERE Lop = '12A2' AND Diem >= 8; (0,5 điểm)
+- b) INSERT INTO HOCSINH VALUES ('HS041', 'Nguyễn Văn A', '12A2', 8); (0,5 điểm)
+`;
+
+  g.SAMPLE = {
+    matrixText: rows.map((r) => r.join('\t')).join('\n'),
+    examText: exam,
+  };
+  if (typeof module !== 'undefined') module.exports = g.SAMPLE;
+})(typeof window !== 'undefined' ? window : globalThis);

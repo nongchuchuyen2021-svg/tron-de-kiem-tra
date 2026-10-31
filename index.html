@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trộn đề kiểm tra</title>
+  <meta name="description" content="Website trộn đề kiểm tra cho giáo viên: nhập ma trận, đề gốc, đáp án; tạo 2–4 mã đề; xuất Word, PDF và đáp án.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Cpath d='M14 22h22M14 32h36M14 42h26' stroke='white' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Bỏ qua tới nội dung</a>
+  <header class="topbar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="currentColor"/><path d="M14 22h22M14 32h36M14 42h26" stroke="#fff" stroke-width="6" stroke-linecap="round"/></svg>
+      <div><h1>TRỘN ĐỀ KIỂM TRA</h1><span>Nhập ma trận, đề gốc, đáp án → tạo 2–4 mã đề → xuất Word &amp; PDF</span></div>
+    </div>
+    <div class="top-actions">
+      <button class="btn sm" id="btn-sample" title="Nạp ma trận và đề mẫu để dùng thử">Dùng dữ liệu mẫu</button>
+      <button class="btn sm ghost" id="btn-open" title="Mở tệp dự án .json đã lưu">Mở dự án</button>
+      <button class="btn sm ghost" id="btn-save" title="Lưu toàn bộ dữ liệu, cấu hình và seed ra tệp .json">Lưu dự án</button>
+      <button class="btn sm ghost danger" id="btn-clear" title="Xóa dữ liệu phiên làm việc khỏi trình duyệt">Xóa dữ liệu phiên</button>
+      <input type="file" id="file-project" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <nav class="stepper" id="stepper" aria-label="5 bước thực hiện"></nav>
+  <main id="main" tabindex="-1"></main>
+
+  <footer class="foot">
+    <span id="save-state">Tự động lưu trong trình duyệt</span>
+    <span>Mọi xử lý diễn ra ngay trên máy của bạn — nội dung đề không được gửi lên mạng và không dùng AI bên ngoài.</span>
+  </footer>
+
+  <div id="modal-root"></div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <div id="busy" hidden><div class="busy-box"><div class="spinner"></div><span id="busy-msg">Đang xử lý…</span></div></div>
+  <input type="file" id="rich-img" accept="image/png,image/jpeg,image/gif" hidden>
+
+  <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/mammoth.browser.min.js"></script>
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/pdf.worker.min.js"></script>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/docx.umd.js"></script>
+  <script src="vendor/pdfmake.min.js"></script>
+  <script src="vendor/fonts.js"></script>
+
+  <script src="js/util.js"></script>
+  <script src="js/htmlkit.js"></script>
+  <script src="js/matrix.js"></script>
+  <script src="js/parse-exam.js"></script>
+  <script src="js/check.js"></script>
+  <script src="js/shuffle.js"></script>
+  <script src="js/doc.js"></script>
+  <script src="js/readers.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="js/export-docx.js"></script>
+  <script src="js/export-pdf.js"></script>
+  <script src="js/export-files.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/ui-exam.js"></script>
+  <script>UI.init();</script>
+</body>
+</html>

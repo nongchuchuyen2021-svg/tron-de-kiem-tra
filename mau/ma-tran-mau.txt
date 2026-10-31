@@ -1,0 +1,17 @@
+Phần	Dạng câu hỏi	Chủ đề	Mức độ	Số câu	Điểm	Vị trí câu
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ1. Mạng máy tính và Internet	Biết	3	0,75	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ1. Mạng máy tính và Internet	Hiểu	1	0,25	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính	Biết	2	0,5	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính	Hiểu	1	0,25	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Biết	1	0,25	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Hiểu	2	0,5	
+Phần I	Trắc nghiệm nhiều lựa chọn	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Vận dụng	2	0,5	
+Phần II	Trắc nghiệm đúng/sai	CĐ1. Mạng máy tính và Internet	Hiểu	1	1	
+Phần II	Trắc nghiệm đúng/sai	CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính	Hiểu	1	1	
+Phần II	Trắc nghiệm đúng/sai	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Vận dụng	1	1	
+Phần III	Trả lời ngắn	CĐ1. Mạng máy tính và Internet	Biết	1	0,5	
+Phần III	Trả lời ngắn	CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính	Hiểu	1	0,5	
+Phần III	Trả lời ngắn	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Biết	1	0,5	
+Phần III	Trả lời ngắn	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Vận dụng	1	0,5	
+Phần IV	Tự luận	CĐ2. Giải quyết vấn đề với sự trợ giúp của máy tính	Vận dụng	1	1	
+Phần IV	Tự luận	CĐ3. Cơ sở dữ liệu và hệ quản trị CSDL	Vận dụng	1	1	
