@@ -295,5 +295,45 @@ t('Trộn được khi chỉ có đề, không có ma trận', () => {
   assert.ok(Shuffle.verify(exam, matrix, g.versions, c).ok);
 });
 
+console.log('\n9. Lời dẫn phần, điểm trong câu, dòng bị PDF ngắt');
+const essayExam = (intro) => ExamParser.parse(Readers.textToBlocks(`PHẦN III. Tự luận (3,0 điểm)
+${intro}
+Câu 1 (1,5 điểm). Nêu khái niệm AI.
+Câu 2 (1,5 điểm). Viết tệp HTML.`));
+t('"Mỗi câu 1,5 điểm" là lời dẫn phần, không phải câu chùm', () => {
+  const r = essayExam('Trả lời hai câu sau trên giấy làm bài. Mỗi câu 1,5 điểm.');
+  assert.strictEqual(Object.keys(r.groups).length, 0);
+  assert.strictEqual(r.parts[0].intro.length, 1);
+});
+t('"Thí sinh trả lời từ câu 1 đến câu 2" là lời dẫn phần', () => {
+  const r = essayExam('Thí sinh trả lời từ câu 1 đến câu 2.');
+  assert.strictEqual(Object.keys(r.groups).length, 0);
+});
+t('Đoạn dẫn "trả lời câu 1 và 2" vẫn là câu chùm', () => {
+  const r = essayExam('Đọc đoạn văn sau và trả lời câu 1 và 2: Máy tính ra đời từ lâu.');
+  assert.ok(r.questions[0].group);
+  assert.strictEqual(r.questions[0].group, r.questions[1].group);
+});
+t('Tách điểm không để lại dấu chấm thừa', () => {
+  const q = essayExam('Làm bài trên giấy.').questions[0];
+  assert.strictEqual(q.points, 1.5);
+  assert.strictEqual(H.textOf(q.stem).trim(), 'Nêu khái niệm AI.');
+});
+t('Nối dòng bị ngắt, giữ nguyên dòng mới và dòng mã', () => {
+  const L = (s, end) => ({ s, start: 40, end, right: 560 });
+  assert.deepStrictEqual(Readers.joinWrapped([
+    L('Câu 1. Viết tệp HTML có tiêu đề chính “Lớp em” và', 555), L('một đoạn dùng phông Tahoma.', 330),
+    L('Câu 2. Đoạn mã sau hiển thị gì ở trình duyệt web của máy tính:', 555), L('<h2>Rau cải</h2>', 120),
+    L('A. Phương án thứ nhất rất dài chạy sát tới lề phải của trang', 555), L('B. Phương án thứ hai', 150),
+  ]), ['Câu 1. Viết tệp HTML có tiêu đề chính “Lớp em” và một đoạn dùng phông Tahoma.', 'Câu 2. Đoạn mã sau hiển thị gì ở trình duyệt web của máy tính:', '<h2>Rau cải</h2>', 'A. Phương án thứ nhất rất dài chạy sát tới lề phải của trang', 'B. Phương án thứ hai']);
+});
+
+t('Không nối dòng bảng đáp án viết thành chữ', () => {
+  const rows = [{ s: 'Câu 1 2 3 4', start: 40, end: 555, right: 560 }, { s: 'Đáp án B A A C', start: 40, end: 555, right: 560 }];
+  assert.deepStrictEqual(Readers.joinWrapped(rows), ['Câu 1 2 3 4', 'Đáp án B A A C']);
+  const spreadRows = [{ s: '1 2 3 4 5', start: 40, end: 555, right: 560 }, { s: 'b c d e g', start: 40, end: 80, right: 560 }];
+  assert.strictEqual(Readers.joinWrapped(spreadRows).length, 2);
+});
+
 console.log(`\nKết quả: ${pass} đạt, ${fail} lỗi`);
 process.exit(fail ? 1 : 0);

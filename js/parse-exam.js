@@ -25,6 +25,10 @@
 
   function rangeNums(text) {
     if (text.length < 12) return null;
+    // lời dẫn chung của phần ("Thí sinh trả lời từ câu 1 đến câu 16") không phải đoạn dẫn câu chùm
+    if (/thí sinh\s+(?:trả lời|chọn)/i.test(text)) return null;
+    // "Mỗi câu 1,5 điểm" là thang điểm, không phải "câu 1 và câu 5"
+    text = text.replace(/(?:mỗi|từng)\s+câu[^.;]*/gi, ' ').replace(/\d+[.,]\d+\s*(?:điểm|đ)(?![\p{L}])/giu, ' ');
     const refers = /(trả lời|dựa vào|sử dụng|đọc|cho .* sau|thông tin|đoạn|bảng|hình)/i.test(text) || RE_Q_RANGE.test(text);
     if (!refers) return null;
     let m = /(?:từ\s+)?(?:các\s+)?câu(?:\s+hỏi)?\s*(?:số\s*)?(\d+)\s*(?:đến|tới|[-–—])\s*(?:câu\s*)?(\d+)/i.exec(text);
@@ -158,7 +162,13 @@
       let stem = c.stem.join('');
       let pointsHint = null;
       const pm = RE_POINTS.exec(H.textOf(stem));
-      if (pm) { pointsHint = U.num(pm[1]); stem = H.removeText(stem, new RegExp(RE_POINTS.source, 'i')).replace(/<p>s+/g, '<p>'); }
+      if (pm) {
+        pointsHint = U.num(pm[1]);
+        const atStart = H.textOf(stem).trim().startsWith(pm[0]);
+        stem = H.removeText(stem, new RegExp(RE_POINTS.source, 'i')).replace(/<p>\s+/g, '<p>');
+        // "Câu 1 (1,5 điểm). Viết…": bỏ dấu câu còn sót sau khi tách điểm
+        if (atStart) stem = stem.replace(/^<p>((?:<(\w+)[^>]*>\s*<\/\2>)*)\s*[.:,\-–—]+\s*/, '<p>$1');
+      }
       const flags = c.flags.slice();
       let type = part.type;
       const nOpt = c.options.length, nSt = c.statements.length;

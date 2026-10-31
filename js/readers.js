@@ -193,6 +193,30 @@
     ];
   };
 
+  /** Nối lại câu bị PDF ngắt dòng: dòng trên chạy sát lề phải (từ đầu dòng dưới không còn chỗ) và dòng dưới không mở đầu mục mới.
+      lines: [{s, start, end, right}] */
+  R.joinWrapped = function (lines) {
+    const out = [];
+    lines.forEach((ln) => {
+      const prev = out[out.length - 1];
+      const text = ln.s.trim();
+      const word = (text.split(/\s/)[0] || '').length;
+      const charW = (ln.end - ln.start) / Math.max(1, text.length);
+      const noRoom = prev && prev.end + (word + 1) * charW >= prev.right - 2;
+      const opens = /^(?:(?:Câu|Bài|PHẦN|Phần)\s*[\dIVXLC]+|Đáp án|ĐA\b|Đ\/A|[A-Fa-f]\s*[.)]|[-–—•*<]|\d+\s*[.)])/.test(text);
+      const ended = prev && (/[?!:;]$/.test(prev.s.trim()) || (/\.$/.test(prev.s.trim()) && !/^\p{Ll}/u.test(text)));
+      // dòng bảng viết thành chữ (các ô cách xa nhau): chữ thưa hơn hẳn dòng văn bản, không phải câu bị ngắt
+      const spread = prev && !prev.joined && (prev.end - prev.start) / Math.max(1, prev.s.trim().length) > 1.5 * charW;
+      if (noRoom && !opens && !ended && !spread && !/\t/.test(ln.s) && !/\t/.test(prev.s)) {
+        prev.joined = true;
+        prev.s = prev.s.trimEnd() + ' ' + text;
+        prev.end = ln.end;
+        prev.right = ln.right;
+      } else out.push(Object.assign({}, ln));
+    });
+    return out.map((l) => l.s);
+  };
+
   R.readPdf = async function (file, onProgress) {
     if (typeof pdfjsLib === 'undefined') throw new Error('Thư viện đọc PDF chưa tải được.');
     const buf = await file.arrayBuffer();
@@ -217,6 +241,7 @@
       });
       rows.forEach((r) => r.parts.sort((a, b) => a.x - b.x));
       if (p === 1) header = R.pdfHeader(rows, page.view[2] - page.view[0]);
+      const right = Math.max(...rows.map((r) => { const l = r.parts[r.parts.length - 1]; return l.x + l.w; }));
       rows.forEach((r) => {
         let s = '';
         let prevEnd = null;
@@ -229,10 +254,10 @@
           s += pt.s;
           prevEnd = pt.x + pt.w;
         });
-        if (s.trim()) lines.push(s.replace(/[  ]+$/g, ''));
+        if (s.trim()) lines.push({ s: s.replace(/[  ]+$/g, ''), start: r.parts[0].x, end: prevEnd, right });
       });
     }
-    const clean = lines.filter((l) => !/^\s*(Mã đề\s*\d+\s*[-–—]?\s*)?(Trang|Page)\s*\d+\s*(\/\s*\d+)?\s*$/i.test(l));
+    const clean = R.joinWrapped(lines.filter((l) => !/^\s*(Mã đề\s*\d+\s*[-–—]?\s*)?(Trang|Page)\s*\d+\s*(\/\s*\d+)?\s*$/i.test(l.s)));
     const chars = clean.join('').replace(/\s/g, '').length;
     if (chars < 20 * pdf.numPages) {
       throw new Error('PDF này không có lớp văn bản (có thể là bản quét/ảnh chụp). Website chưa hỗ trợ nhận dạng chữ (OCR). Hãy dùng tệp Word (.docx) hoặc dán nội dung vào ô văn bản.');
