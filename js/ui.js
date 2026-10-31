@@ -414,6 +414,19 @@
       ${ui.showAnswers ? (ctx.answersReady ? `<h3>Đáp án mã đề ${esc(v.code)}</h3><div class="paper-wrap"><div class="paper small">${Doc.toHtml(Doc.answerModel(st.exam, v, meta))}</div></div>` : `<p class="notice warn">Chưa hiển thị bảng đáp án chính thức vì chưa xác nhận đủ đáp án. ${esc(ctx.answerBlockers.join(' '))} <button class="btn sm" data-act="goto" data-step="2">Đến Bước 2</button></p>`) : ''}
     </section>
     <section class="card">
+      <h3>Phông chữ của file PDF</h3>
+      <p class="hint">File Word dùng phông <b>Times New Roman</b> của máy bạn. File PDF phải nhúng sẵn phông trong file, nên web dùng <b>Tinos</b> (tương đương Times New Roman về kích thước nhưng nét chữ hơi khác). Muốn PDF in đúng Times New Roman, hãy cho web dùng phông có sẵn trên máy Windows của bạn.</p>
+      <div class="notice ${ExportPdf.customFonts ? 'ok' : 'warn'}">Phông đang dùng cho PDF: <b>${esc(ExportPdf.fontName())}</b></div>
+      ${ui.fontMsg ? `<p class="muted">${esc(ui.fontMsg)}</p>` : ''}
+      <div class="row-actions">
+        <button class="btn" data-act="font-system">Dùng Times New Roman trên máy</button>
+        <button class="btn" data-act="font-files">Chọn 4 tệp phông…</button>
+        ${ExportPdf.customFonts ? '<button class="btn ghost" data-act="font-reset">Về phông Tinos</button>' : ''}
+        <input type="file" id="font-files" hidden multiple accept=".ttf">
+      </div>
+      <p class="muted">Nếu chọn tệp: mở thư mục <code>C:\Windows\Fonts</code> và chọn cùng lúc <code>times.ttf</code>, <code>timesbd.ttf</code>, <code>timesi.ttf</code>, <code>timesbi.ttf</code>. Phông chỉ lưu trong trình duyệt của bạn, không gửi đi đâu. Sau khi đổi phông, hãy tải lại file PDF.</p>
+    </section>
+    <section class="card">
       <h3>Danh sách tệp xuất ra</h3>
       <p class="hint">Đề dành cho học sinh được tách riêng khỏi đáp án và hướng dẫn chấm.</p>
       <div class="table-wrap"><table class="grid"><thead><tr><th>Nhóm</th><th>Tệp</th><th>Nội dung</th><th></th></tr></thead><tbody>
@@ -482,6 +495,21 @@
     'tf-independent': (el) => { st.exam.questions.filter((q) => q.type === 'tf').forEach((q) => (q.tfIndependent = el.dataset.v === '1')); UI.commit(); UI.render(true); },
     generate: doGenerate,
     tab: (el) => { ui.tab = +el.dataset.i; UI.render(true); },
+    'font-system': async () => {
+      try {
+        if (!window.queryLocalFonts) throw new Error('Trình duyệt này không cho đọc phông trên máy. Hãy dùng "Chọn 4 tệp phông…".');
+        const all = await window.queryLocalFonts();
+        const pick = (re) => all.find((f) => /^Times New Roman$/i.test(f.family) && re.test(f.style));
+        const fs = { regular: pick(/^Regular$/i), bold: pick(/^Bold$/i), italics: pick(/^Italic$/i), bolditalics: pick(/^Bold Italic$/i) };
+        const miss = Object.keys(fs).filter((k) => !fs[k]);
+        if (miss.length) throw new Error('Không thấy đủ 4 kiểu chữ Times New Roman trên máy. Hãy dùng "Chọn 4 tệp phông…".');
+        const buf = {};
+        for (const k of Object.keys(fs)) buf[k] = await (await fs[k].blob()).arrayBuffer();
+        await useFontBuffers(buf);
+      } catch (e) { ui.fontMsg = e.message; UI.render(true); }
+    },
+    'font-files': () => $('#font-files').click(),
+    'font-reset': async () => { ExportPdf.setFonts(null); await Store.saveFonts(null); ui.fontMsg = 'Đã quay về phông Tinos.'; UI.render(true); },
     'toggle-header': () => { ui.headerOpen = !ui.headerOpen; UI.render(true); },
     'toggle-checks': () => { ui.checksOpen = !ui.checksOpen; UI.render(true); },
     dl: (el) => download(el.dataset.id),
@@ -501,8 +529,35 @@
     if (drop) $('input[type=file]', drop).click();
   }
 
+  /** Nhận 4 kiểu chữ Times New Roman (ArrayBuffer), áp dụng cho PDF và lưu lại cho lần sau. */
+  async function useFontBuffers(buf) {
+    ExportPdf.setFonts(buf);
+    const b64 = ExportPdf.customFonts;
+    await Store.saveFonts(b64);
+    ui.fontMsg = 'Đã dùng Times New Roman cho file PDF. Hãy tải lại các file PDF.';
+    UI.render(true);
+  }
+  /** Phân loại tệp phông theo tên: times.ttf, timesbd.ttf, timesi.ttf, timesbi.ttf (hoặc "Times New Roman Bold Italic.ttf"). */
+  const fontKind = (name) => {
+    const n = name.toLowerCase().replace(/\.ttf$/, '').replace(/[\s_-]/g, '');
+    if (/bi$|bolditalic|italicbold/.test(n)) return 'bolditalics';
+    if (/bd$|bold/.test(n)) return 'bold';
+    if (/i$|italic/.test(n)) return 'italics';
+    return /^times/.test(n) ? 'regular' : null;
+  };
+  async function onFontFiles(files) {
+    try {
+      const buf = {};
+      for (const f of files) { const k = fontKind(f.name); if (k && !buf[k]) buf[k] = await f.arrayBuffer(); }
+      const miss = ['regular', 'bold', 'italics', 'bolditalics'].filter((k) => !buf[k]);
+      if (miss.length) throw new Error('Chưa đủ 4 tệp Times New Roman (times.ttf, timesbd.ttf, timesi.ttf, timesbi.ttf). Còn thiếu: ' + miss.join(', ') + '.');
+      await useFontBuffers(buf);
+    } catch (e) { ui.fontMsg = e.message; UI.render(true); }
+  }
+
   function onChange(e) {
     const t = e.target;
+    if (t.id === 'font-files') { const files = [...t.files]; t.value = ''; return onFontFiles(files); }
     // bảng ma trận
     const tr = t.closest('#matrix-table tr[data-row]');
     if (tr && t.dataset.f) {
@@ -578,6 +633,7 @@
   /* ------------------------------------------------------------ khởi động */
   UI.init = async function () {
     await Store.load();
+    try { const fonts = await Store.loadFonts(); if (fonts) ExportPdf.setFonts(fonts); } catch (e) { /* dùng phông Tinos */ }
     st = Store.state;
     UI.st = () => st;
     bindGlobal();

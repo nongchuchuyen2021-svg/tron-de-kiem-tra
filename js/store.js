@@ -59,6 +59,10 @@
     }, 400);
   };
 
+  /** Phông chữ người dùng nạp (vd. Times New Roman trên máy): lưu riêng, không mất khi xóa phiên. */
+  Store.loadFonts = async () => { try { return (await idb('readonly', (s) => s.get('fonts'))) || null; } catch (e) { return null; } };
+  Store.saveFonts = async (fonts) => { try { await idb('readwrite', (s) => (fonts ? s.put(fonts, 'fonts') : s.delete('fonts'))); return true; } catch (e) { return false; } };
+
   Store.clear = async () => {
     try { await idb('readwrite', (s) => s.delete(KEY)); } catch (e) { /* bỏ qua */ }
     Store.state = Store.defaults();

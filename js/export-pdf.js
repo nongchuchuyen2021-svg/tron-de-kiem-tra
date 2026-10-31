@@ -82,12 +82,26 @@
     return out;
   }
 
+  /** Phông thay thế do người dùng nạp: {regular, bold, italics, bolditalics} là chuỗi base64 của tệp .ttf. */
+  X.customFonts = null;
+  X.fontName = () => (X.customFonts ? 'Times New Roman (phông trên máy)' : 'Tinos (tương đương Times New Roman)');
+  const toB64 = (buf) => { let s = ''; const u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+  /** buffers: {regular, bold, italics, bolditalics} là ArrayBuffer của các tệp phông. */
+  X.setFonts = (buffers) => {
+    if (!buffers) { X.customFonts = null; return; }
+    const need = ['regular', 'bold', 'italics', 'bolditalics'];
+    const miss = need.filter((k) => !buffers[k]);
+    if (miss.length) throw new Error('Thiếu kiểu chữ: ' + miss.join(', '));
+    X.customFonts = {};
+    need.forEach((k) => { X.customFonts[k] = typeof buffers[k] === 'string' ? buffers[k] : toB64(buffers[k]); });
+  };
+
   X.toBlob = function (model, footerText) {
     return new Promise((resolve, reject) => {
       try {
         if (!window.pdfMake) throw new Error('Thư viện PDF chưa tải được.');
-        pdfMake.vfs = window.TINOS_VFS;
-        pdfMake.fonts = { Tinos: { normal: 'Tinos-Regular.ttf', bold: 'Tinos-Bold.ttf', italics: 'Tinos-Italic.ttf', bolditalics: 'Tinos-BoldItalic.ttf' } };
+        pdfMake.vfs = X.customFonts ? Object.assign({}, window.TINOS_VFS, { 'TNR-Regular.ttf': X.customFonts.regular, 'TNR-Bold.ttf': X.customFonts.bold, 'TNR-Italic.ttf': X.customFonts.italics, 'TNR-BoldItalic.ttf': X.customFonts.bolditalics }) : window.TINOS_VFS;
+        pdfMake.fonts = X.customFonts ? { Tinos: { normal: 'TNR-Regular.ttf', bold: 'TNR-Bold.ttf', italics: 'TNR-Italic.ttf', bolditalics: 'TNR-BoldItalic.ttf' } } : { Tinos: { normal: 'Tinos-Regular.ttf', bold: 'Tinos-Bold.ttf', italics: 'Tinos-Italic.ttf', bolditalics: 'Tinos-BoldItalic.ttf' } };
         const def = {
           pageSize: 'A4',
           pageMargins: [15 * PT, 10 * PT, 10 * PT, 10 * PT],
