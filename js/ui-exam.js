@@ -14,7 +14,7 @@
       return UI.setMsgs('exam', [{ level: 'error', text: parsed.warnings[0] }, { level: 'warn', text: 'Mẹo: mỗi câu phải bắt đầu bằng "Câu 1.", "Câu 2."…; phương án bắt đầu bằng "A.", "B.", "C.", "D."; ý đúng/sai bắt đầu bằng "a)", "b)"…' }]);
     }
     if (s.exam && !confirm('Thay thế đề gốc hiện tại bằng đề vừa đọc? Các chỉnh sửa và mã đề đã tạo sẽ bị xóa.')) return;
-    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), header: header || null, footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.' };
+    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), header: header || null, footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.', code: parsed.code || '' };
     s.result = null;
     let ans = null;
     if (parsed.answerBlocks.length) ans = ExamParser.applyAnswers(parsed.answerBlocks, s.exam);

@@ -391,7 +391,13 @@
     const meta = extractMeta(preamble.map((b) => b.text || ''));
     const sepM = blocks.map((b) => (b.kind !== 'table' && RE_Q.exec(b.text)) || null).find(Boolean);
     const labelSep = sepM && /^\s*Câu\s*\d+\s*:/i.test(sepM[0]) ? ':' : '.';
-    return { parts, questions, groups, answerBlocks, warnings, meta, numbering, footerNotes, labelSep };
+    // mã đề ghi trên đề gốc ("Mã đề 101") — dùng để chọn đúng mục trong tệp đáp án có nhiều mã đề
+    let code = '';
+    for (const b of blocksIn.slice(0, 40)) {
+      const cm = /M[ãa]\s*đề\s*[:：]?\s*(\d{2,4})/i.exec(b.kind === 'table' ? (b.rows || []).map((r) => r.join(' ')).join(' ') : b.text || '');
+      if (cm) { code = cm[1]; break; }
+    }
+    return { parts, questions, groups, answerBlocks, warnings, meta, numbering, footerNotes, labelSep, code };
   };
 
   /* ---------------------------------------------------------------------------------
@@ -447,7 +453,34 @@
    */
   P.applyAnswers = function (blocksIn, exam) {
     const warnings = [];
-    const blocks = preprocess(blocksIn.filter((b) => b.kind === 'table' || b.text || b.html));
+    let blocks = preprocess(blocksIn.filter((b) => b.kind === 'table' || b.text || b.html));
+    // tệp đáp án chứa nhiều mã đề ("MÃ ĐỀ 101", "MÃ ĐỀ 102"…): chỉ lấy mục đúng với mã của đề đang nạp
+    const heads = [];
+    blocks.forEach((b, i) => { const hm = b.kind !== 'table' && /^\s*MÃ\s*ĐỀ\s*[:：]?\s*(\d{2,4})\s*$/i.exec(b.text); if (hm) heads.push({ i, code: hm[1] }); });
+    if (heads.length >= 2) {
+      const k = Math.max(0, heads.findIndex((h) => h.code === exam.code));
+      const found = heads.some((h) => h.code === exam.code);
+      blocks = blocks.slice(heads[k].i + 1, k + 1 < heads.length ? heads[k + 1].i : undefined);
+      warnings.unshift(found
+        ? `Tệp đáp án có ${heads.length} mã đề (${heads.map((h) => h.code).join(', ')}): đã dùng mục "MÃ ĐỀ ${heads[k].code}" cho đề đang nạp.`
+        : `Tệp đáp án có ${heads.length} mã đề (${heads.map((h) => h.code).join(', ')}) nhưng không xác định được mã của đề đang nạp: tạm dùng mục "MÃ ĐỀ ${heads[k].code}". Hãy kiểm tra lại đáp án.`);
+    }
+    // bỏ phần "Giải thích …" cuối đáp án (không phải đáp án, dễ bị đọc nhầm thành đáp án)
+    const exIdx = blocks.findIndex((b) => b.kind !== 'table' && /^\s*Giải thích\b/i.test(b.text));
+    if (exIdx >= 0) blocks = blocks.slice(0, exIdx);
+    // dòng "Câu 1 2 3 … 8" + dòng "Đáp án B A A … D" (bảng viết thành chữ, vd. từ PDF) → "1.B 2.A 3.A …"
+    const rowLines = [];
+    for (let i = 0; i < blocks.length; i++) {
+      const a = blocks[i], c = blocks[i + 1];
+      const ma = a.kind !== 'table' && /^\s*Câu\s+(\d+(?:\s+\d+)+)\s*$/i.exec(a.text);
+      const mc = ma && c && c.kind !== 'table' && /^\s*(?:Đáp án|ĐA|Đ\/A)\s+([A-F](?:\s+[A-F])*)\s*$/i.exec(c.text);
+      if (ma && mc) {
+        const nums = ma[1].split(/\s+/), letters = mc[1].split(/\s+/);
+        if (nums.length === letters.length) { rowLines.push({ kind: 'p', html: '', text: nums.map((n, j) => n + '.' + letters[j]).join(' ') }); i++; continue; }
+      }
+      rowLines.push(a);
+    }
+    blocks = rowLines;
     const lines = answerLines(blocks);
     const entries = [];
     const subs = [];
@@ -509,7 +542,9 @@
           if (extra || restHtml) q.guide = (extra ? '<p>' + U.esc(extra) + '</p>' : '') + restHtml;
         } else warnings.push(`Câu ${q.n}: đáp án "${head.slice(0, 20)}" không phải A–D hoặc vượt số phương án.`);
       } else if (q.type === 'tf') {
-        const marks = parseTF(head + ' ' + (e.lines.length > 1 ? restText : ''), q.statements.length);
+        // ưu tiên dòng đáp án ("a) Sai; b) Đúng…"); chỉ tìm thêm trong phần giải thích khi dòng đó chưa đủ ý
+        let marks = parseTF(head, q.statements.length);
+        if (marks.filter(Boolean).length < q.statements.length) marks = parseTF(head + ' ' + (e.lines.length > 1 ? restText : ''), q.statements.length);
         if (marks.filter(Boolean).length) {
           q.statements.forEach((s, i) => { if (marks[i]) s.answer = marks[i]; });
           q.answerNote = 'Nhận dạng từ phần đáp án — cần xác nhận.'; q.answerConfirmed = false; matched++;
