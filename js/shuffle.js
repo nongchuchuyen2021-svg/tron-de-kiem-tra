@@ -187,14 +187,17 @@
     if (config.balanceAnswers !== false) {
       const cnt = [0, 0, 0, 0, 0, 0];
       let tot = 0;
+      const seq = [];
       items.forEach((it) => {
         if (!it.optionOrder) return;
         const q = exam.questions.find((x) => x.id === it.qid);
         const k = it.optionOrder.indexOf(q.answer);
-        if (k >= 0) { cnt[k]++; tot++; }
+        if (k >= 0) { cnt[k]++; tot++; seq.push(k); }
       });
       const avg = tot / 4;
-      for (let k = 0; k < 4; k++) s += 0.6 * Math.pow(cnt[k] - avg, 2);
+      for (let k = 0; k < 4; k++) s += 1.2 * Math.pow(cnt[k] - avg, 2);
+      // tránh 3 câu liên tiếp cùng một đáp án
+      for (let i = 2; i < seq.length; i++) if (seq[i] === seq[i - 1] && seq[i] === seq[i - 2]) s += 1.5;
     }
     return s;
   }

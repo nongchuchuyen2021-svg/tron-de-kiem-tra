@@ -303,6 +303,7 @@
     <section class="card">
       <h2>Bước 4. Chọn số mã đề &amp; tạo mã đề</h2>
       <p class="hint">Mã đề được tạo bằng cách <b>đảo thứ tự câu và phương án</b> của đề gốc theo quy tắc xác định (không dùng AI, không sáng tác câu mới). Nội dung, số liệu, hình ảnh, điểm và mức độ của từng câu được giữ nguyên.</p>
+      ${rd.answersReady ? '' : `<div class="notice warn"><b>Đề chưa có đủ đáp án đã xác nhận.</b> Vẫn tạo được mã đề, nhưng web <b>không thể cân đối vị trí đáp án A/B/C/D</b> (đáp án có thể dồn vào một vài chữ cái) và <b>chưa xuất bảng đáp án, hướng dẫn chấm</b>. Hãy nạp đáp án ở Bước 2 và xác nhận trước khi tạo.<br><button class="btn sm" data-act="goto" data-step="2">Về Bước 2 để nạp đáp án</button></div>`}
       ${rd.canShuffle ? '' : `<div class="notice warn"><b>Chưa thể tạo mã đề.</b> Cần xử lý trước:<ul>${rd.blockers.slice(0, 6).map((b) => `<li>${esc(b)}</li>`).join('')}${rd.blockers.length > 6 ? `<li>… và ${rd.blockers.length - 6} vấn đề khác</li>` : ''}</ul><button class="btn sm" data-act="goto" data-step="3">Đến Bước 3</button></div>`}
       <h3>Số lượng mã đề</h3>
       <div class="count-picker" role="radiogroup" aria-label="Số lượng mã đề">
@@ -348,6 +349,8 @@
     const r = Shuffle.generate(st.exam, st.matrix, config);
     if (!r.ok) { ui.genError = r.errors; UI.render(true); window.scrollTo(0, document.body.scrollHeight); return; }
     const verify = Shuffle.verify(st.exam, st.matrix, r.versions, config);
+    const rdNow = Check.readiness(st.matrix, st.exam);
+    if (!rdNow.answersReady) r.warnings = (r.warnings || []).concat(['Đề chưa có đủ đáp án đã xác nhận: vị trí đáp án A/B/C/D chưa được cân đối và chưa có bảng đáp án. Nạp đáp án rồi tạo lại.']);
     st.result = { versions: r.versions, verify, warnings: r.warnings, generatedAt: Date.now(), dataSig: dataSig(), config: U.clone(config) };
     ui.tab = 0;
     st.step = 5;

@@ -432,6 +432,8 @@
       out[idx] = /^(đ|d|t)/i.test(m[2]) ? 'D' : 'S';
     }
     if (out.filter(Boolean).length >= 1) return out;
+    const seq = [...text.matchAll(/(?:^|[\s,;|])([ĐS])\s*\((?:Đúng|Sai)\)/g)].map((x) => (x[1] === 'Đ' ? 'D' : 'S'));
+    if (seq.length >= 2) return seq.slice(0, n || seq.length);
     const compact = text.replace(/[^ĐSđsDd]/g, '');
     const only = text.replace(/[\s,;\-–.:]/g, '');
     if (/^[ĐSđsDd]+$/.test(only) && only.length === n) return [...only].map((c) => (/[ĐĐđdD]/.test(c) ? 'D' : 'S'));
@@ -448,6 +450,7 @@
     const blocks = preprocess(blocksIn.filter((b) => b.kind === 'table' || b.text || b.html));
     const lines = answerLines(blocks);
     const entries = [];
+    const subs = [];
     let partHint = -1;
     let curE = null;
     const newEntry = (label, head, line) => {
@@ -467,12 +470,15 @@
         curE = null;
         continue;
       }
-      let m = /^(?:Câu|Bài)\s*(\d+)\s*[.:)\-–—]?\s*(.*)$/is.exec(t);
+      let m = /^Câu\s*(\d+)\s*[-–—]\s*([a-f])\s*[:.)]?\s*(Đúng|Sai)?\s*(.*)$/is.exec(t);
+      if (m && m[3]) { subs.push({ label: +m[1], idx: 'abcdef'.indexOf(m[2].toLowerCase()), ans: m[3] === 'Đúng' ? 'D' : 'S', note: m[4].replace(/^(Nhận biết|Thông hiểu|Vận dụng cao|Vận dụng)\s*/i, '').trim(), partHint }); curE = null; continue; }
+      m = /^(?:Câu|Bài)\s*(\d+)\s*[.:)\-–—]?\s*(.*)$/is.exec(t);
       if (m) { newEntry(+m[1], m[2], ln); curE.lines.push(ln); curE.firstLine = ln; continue; }
+      const essayPart = partHint >= 0 && exam.parts[partHint] && exam.parts[partHint].type === 'essay';
       m = /^(\d+)\s*[.:)\-–]\s*(.+)$/s.exec(t);
-      if (m && (/^([A-F]\b|[a-f]\s*[-.)]|[ĐS]\b|Đúng|Sai)/.test(m[2]) || ln.tbl)) { newEntry(+m[1], m[2], ln); curE.lines.push(ln); curE.firstLine = ln; continue; }
+      if (m && !essayPart && (/^([A-F]\b|[a-f]\s*[-.)]|[ĐS]\b|Đúng|Sai)/.test(m[2]) || ln.tbl)) { newEntry(+m[1], m[2], ln); curE.lines.push(ln); curE.firstLine = ln; continue; }
       m = /^(\d+)\s+(\S.*)$/s.exec(t);
-      if (m && ln.tbl) { newEntry(+m[1], m[2], ln); curE.lines.push(ln); curE.firstLine = ln; continue; }
+      if (m && ln.tbl && !essayPart) { newEntry(+m[1], m[2], ln); curE.lines.push(ln); curE.firstLine = ln; continue; }
       if (curE) curE.lines.push(ln);
     }
 
@@ -519,7 +525,17 @@
         if (g1) { q.guide = g1; matched++; }
       }
     });
-    return { matched, entries: entries.length, warnings };
+    // đáp án/giải thích theo từng ý đúng-sai ("Câu 1 - a: Đúng ...") — ưu tiên hơn dòng tóm tắt
+    subs.forEach((sb) => {
+      const part = sb.partHint >= 0 ? exam.parts[sb.partHint] : null;
+      const q = qs.find((x) => x.type === 'tf' && x.label === sb.label && (!part || x.part === part.id));
+      const st = q && q.statements[sb.idx];
+      if (!st) return;
+      if (!st.answer) { st.answer = sb.ans; matched++; }
+      q.answerNote = 'Nhận dạng từ phần đáp án — cần xác nhận.'; q.answerConfirmed = false;
+      if (sb.note) st.guide = '<p>' + U.esc(sb.note) + '</p>';
+    });
+    return { matched, entries: entries.length, warnings: warnings.filter((w) => !/chỉ đọc được \d+\/\d+ đáp án đúng\/sai/.test(w) || !subs.length) };
   };
 
   g.ExamParser = P;
