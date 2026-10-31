@@ -93,12 +93,18 @@
           pageMargins: [15 * PT, 10 * PT, 10 * PT, 10 * PT],
           defaultStyle: { font: 'Tinos', fontSize: model.fontSize || 11, lineHeight: 0.94 },
           content: convert(model),
-          footer: (cur, total) => ({ text: (footerText ? footerText + ' – ' : '') + `Trang ${cur} / ${total}`, alignment: 'center', fontSize: 11, margin: [0, 2, 0, 0] }),
+          footer: (cur, total) => (X.lastPages = total, { text: (footerText ? footerText + ' – ' : '') + `Trang ${cur} / ${total}`, alignment: 'center', fontSize: 11, margin: [0, 2, 0, 0] }),
           info: { title: footerText || 'Đề kiểm tra', creator: 'Trộn đề kiểm tra' },
         };
         pdfMake.createPdf(def).getBlob((blob) => resolve(blob));
       } catch (e) { reject(e); }
     });
+  };
+
+  /** Số trang thật của một mô hình tài liệu khi dàn trang. */
+  X.pageCount = async function (model) {
+    await X.toBlob(model, '');
+    return X.lastPages || 0;
   };
 
   g.ExportPdf = X;

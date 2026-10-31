@@ -18,47 +18,41 @@
   };
 
   D.defaultMeta = () => ({
-    school: '', dept: '', title: 'ĐỀ KIỂM TRA', subject: '', grade: '', year: '', time: '', studentLine: true, official: true,
+    school: 'TRƯỜNG THPT NA RÌ', group: '', dept: '', title: 'ĐỀ KIỂM TRA', subject: '', grade: '', year: '', time: '', pages: '', studentLine: true,
   });
 
   /* ---- Tiêu đề đề thi ---- */
-  /** Tiêu đề lấy từ đề gốc: sao chép nguyên khối, chỉ thay số mã đề. */
-  function templateHeader(tpl, code) {
-    let found = false;
-    const fix = (b) => {
-      if (b.k === 'p') return Object.assign({}, b, { runs: b.runs.map((r) => (r.t === 'text' && /Mã đề\s*:?\s*\d+/i.test(r.s) ? (found = true, Object.assign({}, r, { s: r.s.replace(/(Mã đề\s*:?\s*)\d+/i, '$1' + code) })) : r)) });
-      if (b.k === 'table') return Object.assign({}, b, { rows: b.rows.map((r) => ({ cells: r.cells.map((c) => Object.assign({}, c, { blocks: c.blocks.map(fix) })) })) });
-      return b;
-    };
-    const out = tpl.map(fix);
-    if (!found) out.push(P([T('Mã đề ' + code, { b: true })], { align: 'right' }));
-    out.push(P([], { sa: 2 }));
-    return out;
-  }
-
-  function headerBlocks(meta, code) {
+  /** Mẫu tiêu đề chuẩn dùng cho mọi đề: trường/tổ/số trang bên trái, tên bài/năm học/môn/thời gian bên phải,
+      dòng họ tên – lớp – mã đề. Số trang lấy theo số trang thật của mã đề (exam.pageCount) nếu đã có. */
+  D.subjectLine = (meta) => {
+    const subject = (meta.subject || '').trim();
+    if (!subject) return '';
+    return meta.grade && !/\d\s*$/.test(subject) ? `${subject} ${meta.grade}` : subject;
+  };
+  function headerBlocks(meta, code, pageCount) {
+    const c = (runs) => P(runs, { align: 'center' });
     const left = [];
-    if (meta.dept) left.push(P([T(meta.dept.toUpperCase())], { align: 'center' }));
-    if (meta.school) left.push(P([T(meta.school.toUpperCase(), { b: true })], { align: 'center' }));
-    if (meta.official) left.push(P([T('ĐỀ CHÍNH THỨC', { b: true })], { align: 'center', sb: 4 }));
+    if (meta.dept) left.push(c([T(meta.dept.toUpperCase())]));
+    if (meta.school) left.push(c([T(meta.school.toUpperCase(), { b: true })]));
+    if (meta.group) left.push(c([T(meta.group.toUpperCase(), { b: true })]));
+    const pages = pageCount || +meta.pages || 0;
+    if (pages) left.push(c([T(`(Đề gồm có ${String(pages).padStart(2, '0')} trang)`, { i: true })]));
     if (!left.length) left.push(P([]));
     const right = [];
-    if (meta.title) right.push(P([T(meta.title.toUpperCase(), { b: true })], { align: 'center' }));
-    if (meta.year) right.push(P([T('NĂM HỌC ' + meta.year.replace(/^NĂM HỌC\s*/i, ''), { b: true })], { align: 'center' }));
-    const sub = [meta.subject && 'Môn: ' + meta.subject, meta.grade && 'Lớp ' + meta.grade].filter(Boolean).join(' – ');
-    if (sub) right.push(P([T(sub, { b: true })], { align: 'center' }));
-    if (meta.time) right.push(P([T('Thời gian làm bài: ' + meta.time + ' (không kể thời gian phát đề)', { i: true })], { align: 'center' }));
-    const out = [{ k: 'table', border: 'none', cols: [70, 100], rows: [{ cells: [{ blocks: left }, { blocks: right }] }] }];
-    const dots = '…………………………………………';
-    out.push({
-      k: 'table', border: 'none', cols: [125, 45],
-      rows: [{ cells: [
-        { blocks: meta.studentLine ? [P([T('Họ và tên thí sinh: ' + dots)], { sb: 6 }), P([T('Lớp: ………………   Số báo danh: …………………')], { sb: 4 })] : [P([])] },
-        { border: 'box', align: 'center', blocks: [P([T('Mã đề: ', { b: true, size: 14 }), T(String(code), { b: true, size: 18 })], { align: 'center', sb: 4, sa: 4 })] },
-      ] }],
-    });
-    out.push(P([], { sa: 4 }));
-    return out;
+    if (meta.title) right.push(c([T(meta.title.toUpperCase(), { b: true })]));
+    if (meta.year) right.push(c([T('NĂM HỌC ' + meta.year.replace(/^NĂM HỌC\s*/i, '').replace(/\s*[-–—]\s*/, ' - '), { b: true })]));
+    const sub = D.subjectLine(meta);
+    if (sub) right.push(c([T('MÔN: ' + sub, { b: true })]));
+    if (meta.time) right.push(c([T('Thời gian làm bài: ' + meta.time, { i: true })]));
+    const mm = (tw) => tw / 56.7;
+    const code1 = { blocks: [P([T('Mã đề ' + code, { b: true })], { align: 'center' })] };
+    return [
+      { k: 'table', border: 'none', cols: [mm(4900), mm(5588)], rows: [{ cells: [{ blocks: left }, { blocks: right }] }] },
+      meta.studentLine === false
+        ? { k: 'table', border: 'none', cols: [mm(7988), mm(2500)], rows: [{ cells: [{ blocks: [P([])] }, code1] }] }
+        : { k: 'table', border: 'none', cols: [mm(5200), mm(2788), mm(2500)], rows: [{ cells: [{ blocks: [P([T('Họ và tên: ........................................')])] }, { blocks: [P([T('Lớp: ..............')])] }, code1] }] },
+      P([], { sa: 2 }),
+    ];
   }
 
   /* ---- Một câu hỏi ---- */
@@ -110,7 +104,7 @@
   /** Đề cho học sinh (không có đáp án). */
   D.examModel = function (exam, version, meta, opts) {
     opts = opts || {};
-    const out = exam.header && !(meta && meta.useDefaultHeader) ? templateHeader(exam.header, version.code) : headerBlocks(meta, version.code);
+    const out = headerBlocks(meta, version.code, exam.pageCount);
     let lastPart = null, lastGroup = null;
     version.items.forEach((item, idx) => {
       const q = exam.questions.find((x) => x.id === item.qid);
@@ -146,7 +140,7 @@
 
   function infoTitle(text, meta, code) {
     const lines = [P([T(text, { b: true, size: 14 })], { align: 'center', sa: 2 })];
-    const sub = [meta.title, meta.subject && 'Môn ' + meta.subject, meta.grade && 'Lớp ' + meta.grade, meta.year].filter(Boolean).join(' – ');
+    const sub = [meta.title, D.subjectLine(meta) && 'Môn ' + D.subjectLine(meta), meta.year].filter(Boolean).join(' – ');
     if (sub) lines.push(P([T(sub, { i: true })], { align: 'center', sa: 6 }));
     return lines;
   }

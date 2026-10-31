@@ -116,7 +116,9 @@
             });
           });
           rows.forEach((r, i) => { for (let k = 0; k < r.length; k++) if (r[k] === undefined) r[k] = ''; rows[i] = r; });
-          push('table', el.outerHTML, { rows });
+          // từng dòng trong ô (mỗi đoạn một dòng), dùng để đọc thông tin tiêu đề mà không bị dính chữ
+          const lines = [...el.querySelectorAll('td,th')].flatMap((c) => { const ps = [...c.querySelectorAll('p')]; return (ps.length ? ps : [c]).map((x) => x.textContent.replace(/\s+/g, ' ').trim()); }).filter(Boolean);
+          push('table', el.outerHTML, { rows, lines });
         } else if (tag === 'UL' || tag === 'OL') {
           el.querySelectorAll(':scope > li').forEach((li) => splitBr(li).forEach((h) => push('li', h)));
         } else if (tag === 'DIV' || tag === 'SECTION' || tag === 'BODY') {

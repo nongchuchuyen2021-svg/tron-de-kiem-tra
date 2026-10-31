@@ -7,6 +7,20 @@
   const chip = UI.chip;
 
   /* ------------------------------------------------------------ dựng dữ liệu từ kết quả phân tích */
+  /** Điền thông tin vào mẫu tiêu đề chuẩn từ đề vừa nạp. Thông tin riêng của đề cũ không được giữ lại cho đề mới. */
+  function applyMeta(s, parsedMeta, header) {
+    const flat = (b) => (b.k === 'table' ? b.rows.flatMap((r) => r.cells.flatMap((c) => c.blocks.flatMap(flat))) : [(b.runs || []).map((r) => r.s || '').join('')]);
+    const m = Object.assign({}, parsedMeta, header ? ExamParser.extractMeta(header.flatMap(flat)) : {});
+    const defaults = Doc.defaultMeta();
+    ['group', 'title', 'subject', 'grade', 'time', 'pages'].forEach((k) => { s.meta[k] = m[k] || defaults[k]; });
+    s.meta.school = m.school || s.meta.school || defaults.school;
+    if (m.year) s.meta.year = m.year;
+    const missing = [!m.school && `trường (đang dùng "${s.meta.school}")`, !m.group && 'tổ chuyên môn', !m.subject && 'môn học', !m.time && 'thời gian làm bài', !s.meta.year && 'năm học'].filter(Boolean);
+    return missing.length
+      ? { level: 'warn', text: `Tiêu đề các mã đề dùng mẫu chuẩn. Đề gốc chưa có: ${missing.join(', ')}. Hãy kiểm tra ở mục "Thông tin đầu đề" (Bước 5).` }
+      : { level: 'ok', text: 'Đã đọc đủ thông tin tiêu đề: các mã đề dùng mẫu tiêu đề chuẩn.' };
+  }
+
   function applyExam(blocks, source, preWarnings, header, fontSize) {
     const s = st();
     const parsed = ExamParser.parse(blocks);
@@ -14,13 +28,13 @@
       return UI.setMsgs('exam', [{ level: 'error', text: parsed.warnings[0] }, { level: 'warn', text: 'Mẹo: mỗi câu phải bắt đầu bằng "Câu 1.", "Câu 2."…; phương án bắt đầu bằng "A.", "B.", "C.", "D."; ý đúng/sai bắt đầu bằng "a)", "b)"…' }]);
     }
     if (s.exam && !confirm('Thay thế đề gốc hiện tại bằng đề vừa đọc? Các chỉnh sửa và mã đề đã tạo sẽ bị xóa.')) return;
-    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), header: header || null, footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.', code: parsed.code || '', fontSize: fontSize || null };
+    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.', code: parsed.code || '', fontSize: fontSize || null };
     s.result = null;
     let ans = null;
     if (parsed.answerBlocks.length) ans = ExamParser.applyAnswers(parsed.answerBlocks, s.exam);
-    Object.keys(parsed.meta).forEach((k) => { if (!s.meta[k]) s.meta[k] = parsed.meta[k]; });
+    const notice = applyMeta(s, parsed.meta, header);
     const list = [{ level: 'ok', text: `Đã nhận dạng ${parsed.questions.length} câu hỏi trong ${parsed.parts.length} phần từ ${source}. Mọi câu đang ở trạng thái "Cần kiểm tra" — hãy xem lại rồi xác nhận.` }];
-    if (header) list.push({ level: 'ok', text: 'Đã lấy mẫu tiêu đề của đề gốc: các mã đề sẽ dùng đúng tiêu đề này (chỉ thay số mã đề).' });
+    list.push(notice);
     (preWarnings || []).forEach((w) => list.push({ level: 'warn', text: w }));
     if (ans) {
       list.push({ level: ans.matched ? 'ok' : 'warn', text: ans.matched ? `Nhận dạng đáp án/hướng dẫn chấm cuối đề cho ${ans.matched}/${parsed.questions.length} câu (cần giáo viên xác nhận).` : 'Có phần đáp án cuối đề nhưng chưa khớp được câu nào.' });
@@ -78,7 +92,7 @@
     const parsed = ExamParser.parse(Readers.textToBlocks(SAMPLE.examText));
     s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source: 'Dữ liệu mẫu', importedAt: Date.now() };
     ExamParser.applyAnswers(parsed.answerBlocks, s.exam);
-    Object.assign(s.meta, parsed.meta, { dept: 'SỞ GD&ĐT …', school: 'TRƯỜNG THPT ABC', title: 'Kiểm tra giữa kì I', year: '2025-2026' });
+    Object.assign(s.meta, parsed.meta, { dept: 'SỞ GD&ĐT …', school: 'TRƯỜNG THPT ABC', group: 'TỔ CHUYÊN MÔN', title: 'Kiểm tra giữa kì I', year: '2025-2026' });
     s.result = null;
     s.step = 1;
     UI.ui.msgs = { matrix: [{ level: 'ok', text: 'Đã nạp ma trận mẫu (Tin học 12, 21 câu, 10 điểm). Hãy xem lại bảng, rồi bấm "Xác nhận ma trận".' }], exam: [], answer: [] };

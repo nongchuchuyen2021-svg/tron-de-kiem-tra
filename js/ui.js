@@ -340,7 +340,7 @@
       <button class="btn primary lg" data-act="generate" ${rd.canShuffle && !ci.length ? '' : 'disabled'}>Tạo mã đề</button></div>`;
   }
 
-  function doGenerate() {
+  async function doGenerate() {
     const rd = Check.readiness(st.matrix, st.exam);
     if (!rd.canShuffle) return UI.toast('Còn sai lệch bắt buộc chưa xử lý (xem Bước 3).', 'err');
     if (codeIssues().length) return UI.toast(codeIssues().join(' '), 'err');
@@ -349,6 +349,14 @@
     const r = Shuffle.generate(st.exam, st.matrix, config);
     if (!r.ok) { ui.genError = r.errors; UI.render(true); window.scrollTo(0, document.body.scrollHeight); return; }
     const verify = Shuffle.verify(st.exam, st.matrix, r.versions, config);
+    // ghi đúng số trang vào tiêu đề: lấy số trang lớn nhất trong các mã đề
+    try {
+      UI.busy('Đang tính số trang của các mã đề…');
+      await new Promise((res) => setTimeout(res, 30));
+      let pages = 0;
+      for (const v of r.versions) pages = Math.max(pages, await ExportPdf.pageCount(Doc.examModel(st.exam, v, st.meta)));
+      if (pages) st.exam.pageCount = pages;
+    } catch (e) { console.error(e); } finally { UI.busy(); }
     const rdNow = Check.readiness(st.matrix, st.exam);
     if (!rdNow.answersReady) r.warnings = (r.warnings || []).concat(['Đề chưa có đủ đáp án đã xác nhận: vị trí đáp án A/B/C/D chưa được cân đối và chưa có bảng đáp án. Nạp đáp án rồi tạo lại.']);
     st.result = { versions: r.versions, verify, warnings: r.warnings, generatedAt: Date.now(), dataSig: dataSig(), config: U.clone(config) };
@@ -389,10 +397,10 @@
     <section class="card">
       <div class="card-head"><h3>Thông tin đầu đề</h3><button class="btn sm ghost" data-act="toggle-header">${ui.headerOpen ? 'Thu gọn' : 'Chỉnh sửa'}</button></div>
       ${ui.headerOpen ? `<div class="grid4">
-        ${fld('dept', 'Sở / Phòng GD&ĐT', 'SỞ GD&ĐT …')}${fld('school', 'Tên trường', 'TRƯỜNG THPT …')}${fld('title', 'Tên bài kiểm tra', 'KIỂM TRA GIỮA KÌ I')}${fld('subject', 'Môn học', 'Tin học')}
-        ${fld('grade', 'Lớp', '12')}${fld('year', 'Năm học', '2025-2026')}${fld('time', 'Thời gian làm bài', '45 phút')}
-        <div class="checks"><label class="check"><input type="checkbox" data-meta-bool="studentLine" ${meta.studentLine ? 'checked' : ''}><span>In dòng họ tên, lớp, SBD của học sinh</span></label><label class="check"><input type="checkbox" data-meta-bool="official" ${meta.official ? 'checked' : ''}><span>In dòng "ĐỀ CHÍNH THỨC"</span></label></div>
-      </div>` : `<p class="muted">${esc([meta.dept, meta.school, meta.title, meta.subject && 'Môn ' + meta.subject, meta.grade && 'Lớp ' + meta.grade, meta.year, meta.time].filter(Boolean).join(' · ') || 'Chưa nhập thông tin đầu đề. Bấm "Chỉnh sửa" để nhập tên trường, môn, lớp, thời gian…')}</p>`}
+        ${fld('school', 'Tên trường', 'TRƯỜNG THPT NA RÌ')}${fld('group', 'Tổ chuyên môn', 'TỔ TỰ NHIÊN 1')}${fld('title', 'Tên bài kiểm tra', 'ĐỀ KIỂM TRA GIỮA HỌC KÌ 1')}${fld('subject', 'Môn học', 'Tin học 12')}
+        ${fld('year', 'Năm học', '2026 - 2027')}${fld('time', 'Thời gian làm bài', '45 phút')}${fld('dept', 'Sở / Phòng GD&ĐT (nếu cần)', 'SỞ GD&ĐT …')}
+        <div class="checks"><label class="check"><input type="checkbox" data-meta-bool="studentLine" ${meta.studentLine ? 'checked' : ''}><span>In dòng họ tên, lớp của học sinh</span></label></div>
+      </div>` : `<p class="muted">${esc([meta.dept, meta.school, meta.group, meta.title, Doc.subjectLine(meta) && 'Môn ' + Doc.subjectLine(meta), meta.year, meta.time].filter(Boolean).join(' · ') || 'Chưa nhập thông tin đầu đề. Bấm "Chỉnh sửa" để nhập tên trường, môn, lớp, thời gian…')}</p>`}
     </section>
     <section class="card">
       <div class="tabs" role="tablist">${r.versions.map((x, i) => `<button role="tab" class="tab ${i === ui.tab ? 'on' : ''}" aria-selected="${i === ui.tab}" data-act="tab" data-i="${i}">Mã đề ${esc(x.code)}</button>`).join('')}</div>

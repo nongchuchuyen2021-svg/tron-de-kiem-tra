@@ -335,5 +335,48 @@ t('Không nối dòng bảng đáp án viết thành chữ', () => {
   assert.strictEqual(Readers.joinWrapped(spreadRows).length, 2);
 });
 
+console.log('\n10. Mẫu tiêu đề chuẩn cho mọi đề');
+const headText = (m) => JSON.stringify(m.slice(0, 2));
+t('Đọc thông tin từ tiêu đề kiểu khác', () => {
+  const m = ExamParser.extractMeta(['SỞ GD&ĐT THÁI NGUYÊN', 'TRƯỜNG THPT NA RÌ', 'TỔ XÃ HỘI', '(Đề thi có 03 trang)', 'ĐỀ KIỂM TRA CUỐI KÌ I - MÔN: NGỮ VĂN 11', 'Năm học 2026 – 2027', 'Thời gian: 90 phút (không kể thời gian phát đề)']);
+  assert.strictEqual(m.dept, 'SỞ GD&ĐT THÁI NGUYÊN');
+  assert.strictEqual(m.school, 'TRƯỜNG THPT NA RÌ');
+  assert.strictEqual(m.group, 'TỔ XÃ HỘI');
+  assert.strictEqual(m.pages, '3');
+  assert.strictEqual(m.title, 'ĐỀ KIỂM TRA CUỐI KÌ I');
+  assert.strictEqual(m.subject, 'NGỮ VĂN 11');
+  assert.strictEqual(m.year, '2026-2027');
+  assert.strictEqual(m.time, '90 phút');
+});
+t('Dòng "Môn: Toán - Lớp 10" tách đúng môn và lớp', () => {
+  const m = ExamParser.extractMeta(['Môn: Toán – Lớp 10   Thời gian làm bài: 60 phút']);
+  assert.strictEqual(m.subject, 'Toán');
+  assert.strictEqual(m.grade, '10');
+  assert.strictEqual(m.time, '60 phút');
+});
+t('Chữ "môn" trong câu văn không bị hiểu là tên môn', () => {
+  const m = ExamParser.extractMeta(['Với các môn không sử dụng Trả lời ngắn có thể chuyển điểm sang dạng Đúng – Sai.', 'MÔN: TOÁN - LỚP 12', 'NĂM HỌC: 2026 - 2027', 'THỜI GIAN LÀM BÀI: 90 PHÚT']);
+  assert.strictEqual(m.subject, 'TOÁN');
+  assert.strictEqual(m.grade, '12');
+  assert.strictEqual(m.year, '2026-2027');
+  assert.strictEqual(m.time, '90 phút');
+});
+t('Bảng tiêu đề nhiều dòng trong một ô không bị dính chữ', () => {
+  const blocks = H.parseBlocks('<table><tr><td><p>TRƯỜNG THPT ABC</p><p>TỔ TOÁN</p></td><td><p>MÔN: TOÁN</p><p>Thời gian làm bài: 60 phút</p></td></tr></table><p>Câu 1. Hai cộng hai bằng mấy?</p><p>A. 1</p><p>B. 2</p><p>C. 3</p><p>D. 4</p>');
+  const m = ExamParser.parse(blocks).meta;
+  assert.strictEqual(m.school, 'TRƯỜNG THPT ABC');
+  assert.strictEqual(m.group, 'TỔ TOÁN');
+  assert.strictEqual(m.subject, 'TOÁN');
+  assert.strictEqual(m.time, '60 phút');
+});
+t('Mọi đề đều ra đúng mẫu, số trang theo thực tế', () => {
+  const { matrix, exam } = loadSample();
+  const r = Shuffle.generate(exam, matrix, cfg(2));
+  const meta = Object.assign(Doc.defaultMeta(), { group: 'Tổ Tự nhiên 1', title: 'Đề kiểm tra giữa học kì 1', subject: 'Toán', grade: '10', year: '2026-2027', time: '60 phút' });
+  exam.pageCount = 3;
+  const h = headText(Doc.examModel(exam, r.versions[1], meta));
+  ['TRƯỜNG THPT NA RÌ', 'TỔ TỰ NHIÊN 1', '(Đề gồm có 03 trang)', 'ĐỀ KIỂM TRA GIỮA HỌC KÌ 1', 'NĂM HỌC 2026 - 2027', 'MÔN: Toán 10', 'Thời gian làm bài: 60 phút', 'Họ và tên:', 'Lớp:', 'Mã đề ' + r.versions[1].code].forEach((x) => assert.ok(h.includes(x), x));
+});
+
 console.log(`\nKết quả: ${pass} đạt, ${fail} lỗi`);
 process.exit(fail ? 1 : 0);

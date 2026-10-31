@@ -105,21 +105,23 @@
     return n === 1 && options.length >= 3 ? marked.indexOf(true) : -1;
   }
 
-  function extractMeta(lines0) {
-    const lines = lines0.flatMap((l) => l.split(/\s{2,}/));
+  /** Đọc thông tin tiêu đề từ các dòng đầu đề, không phụ thuộc đề được trình bày theo mẫu nào. */
+  P.extractMeta = function extractMeta(lines0) {
+    const lines = lines0.flatMap((l) => String(l).split(/\s{2,}|\t/)).map((l) => l.trim()).filter(Boolean);
     const meta = {};
-    const joined = lines.join('\n');
-    let m;
-    if ((m = /Thời gian(?: làm bài)?\s*[:\-]?\s*(\d+)\s*phút/i.exec(joined))) meta.time = m[1] + ' phút';
-    if ((m = /Môn\s*[:\-]?\s*([^\n,;–—(]+?)(?:\s*[-–—,]\s*Lớp|\s*Lớp|\s*Thời gian|\s*Họ và tên|\n|$)/i.exec(joined))) meta.subject = m[1].trim();
-    if ((m = /Lớp\s*[:\-]?\s*(\d{1,2})/i.exec(joined))) meta.grade = m[1];
-    if ((m = /Năm học\s*[:\-]?\s*(\d{4}\s*[-–—]\s*\d{4})/i.exec(joined))) meta.year = m[1].replace(/\s/g, '');
-    const school = lines.find((l) => /^(TRƯỜNG|SỞ|THPT|TRUNG TÂM)\b/i.test(l.trim()) && l.length < 80);
-    if (school) meta.school = school.trim();
-    const title = lines.find((l) => /(KIỂM TRA|ĐỀ THI|ĐỀ ÔN|ĐỀ KIỂM TRA)/i.test(l) && l.length < 120);
-    if (title) meta.title = title.trim();
+    const first = (re, fn) => { for (const l of lines) { const m = re.exec(l); if (m) return fn(m, l); } return undefined; };
+    const set = (k, v) => { if (v) meta[k] = v; };
+    set('dept', first(/^(?:SỞ|PHÒNG|BỘ)\s+(?:GD|GIÁO DỤC)/i, (m, l) => l));
+    set('school', first(/^(?:TRƯỜNG(?!\s+HỢP)|TRUNG TÂM|THPT|THCS)\s/i, (m, l) => (l.length < 80 ? l : '')));
+    set('group', first(/^(?:TỔ|NHÓM)\s+\S/i, (m, l) => (l.length < 60 ? l : '')));
+    set('pages', first(/(?:gồm|có)\s*(?:có\s*)?(\d+)\s*trang/i, (m) => String(+m[1])));
+    set('time', first(/Thời gian(?: làm bài)?\s*[:\-]?\s*(\d+)\s*phút/i, (m) => m[1] + ' phút'));
+    set('year', first(/Năm học\s*[:\-]?\s*(\d{4}\s*[-–—]\s*\d{4})/i, (m) => m[1].replace(/\s/g, '').replace(/[–—]/, '-')));
+    set('grade', first(/Lớp\s*[:\-]?\s*(\d{1,2})(?!\d)/i, (m) => m[1]));
+    set('subject', first(/^(?=.{0,100}$)(?:.*[-–—,]\s*)?Môn(?:\s+(?:thi|học))?\s*[:\-]?\s*([^,;(]+)/i, (m) => m[1].replace(/\s*[-–—]?\s*(?:Lớp|Thời gian|Họ và tên|Năm học)(?:\s|:|$).*$/i, '').trim()));
+    set('title', first(/^(?!\()(?!.*\d\s*trang).*(KIỂM TRA|ĐỀ THI|ĐỀ ÔN|ĐÁNH GIÁ)/i, (m, l) => (l.length < 120 ? l.replace(/\s*[-–—,:]?\s*(?:MÔN|NĂM HỌC|LỚP)(?:\s|:).*$/i, '').trim() : '')));
     return meta;
-  }
+  };
 
   /**
    * Phân tích đề.  blocks: [{kind:'p'|'li'|'table', html, text, rows?}]
@@ -398,7 +400,7 @@
     });
     questions.forEach((q) => q.flags.forEach((f) => warnings.push(`Câu ${q.n}: ${f}`)));
 
-    const meta = extractMeta(preamble.map((b) => b.text || ''));
+    const meta = P.extractMeta(preamble.flatMap((b) => b.lines || [b.text || '']));
     const sepM = blocks.map((b) => (b.kind !== 'table' && RE_Q.exec(b.text)) || null).find(Boolean);
     const labelSep = sepM && /^\s*Câu\s*\d+\s*:/i.test(sepM[0]) ? ':' : '.';
     // mã đề ghi trên đề gốc ("Mã đề 101") — dùng để chọn đúng mục trong tệp đáp án có nhiều mã đề
