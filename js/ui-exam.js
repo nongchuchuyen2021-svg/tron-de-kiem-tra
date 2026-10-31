@@ -7,14 +7,14 @@
   const chip = UI.chip;
 
   /* ------------------------------------------------------------ dựng dữ liệu từ kết quả phân tích */
-  function applyExam(blocks, source, preWarnings, header) {
+  function applyExam(blocks, source, preWarnings, header, fontSize) {
     const s = st();
     const parsed = ExamParser.parse(blocks);
     if (!parsed.questions.length) {
       return UI.setMsgs('exam', [{ level: 'error', text: parsed.warnings[0] }, { level: 'warn', text: 'Mẹo: mỗi câu phải bắt đầu bằng "Câu 1.", "Câu 2."…; phương án bắt đầu bằng "A.", "B.", "C.", "D."; ý đúng/sai bắt đầu bằng "a)", "b)"…' }]);
     }
     if (s.exam && !confirm('Thay thế đề gốc hiện tại bằng đề vừa đọc? Các chỉnh sửa và mã đề đã tạo sẽ bị xóa.')) return;
-    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), header: header || null, footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.', code: parsed.code || '' };
+    s.exam = { parts: parsed.parts, questions: parsed.questions, groups: parsed.groups, numbering: parsed.numbering, source, importedAt: Date.now(), header: header || null, footerNotes: parsed.footerNotes || [], labelSep: parsed.labelSep || '.', code: parsed.code || '', fontSize: fontSize || null };
     s.result = null;
     let ans = null;
     if (parsed.answerBlocks.length) ans = ExamParser.applyAnswers(parsed.answerBlocks, s.exam);
@@ -42,7 +42,7 @@
       const res = await Readers.readBlocks(file, (m) => UI.busy(m));
       UI.busy('Đang nhận dạng câu hỏi…');
       await new Promise((r) => setTimeout(r, 20));
-      applyExam(res.blocks, file.name, res.warnings, res.header);
+      applyExam(res.blocks, file.name, res.warnings, res.header, res.fontSize);
     } catch (e) {
       UI.setMsgs('exam', [{ level: 'error', text: 'Không đọc được tệp: ' + e.message }, { level: 'warn', text: 'Cách xử lý: dùng tệp Word (.docx) hoặc dán trực tiếp nội dung đề vào ô bên cạnh.' }]);
     } finally { UI.busy(); }

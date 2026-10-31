@@ -136,6 +136,7 @@
     });
     out.push(P([T('— HẾT —', { i: true })], { align: 'center', sb: 4 }));
     (exam.footerNotes || []).forEach((n) => out.push(P([T('-   ' + n)], { ind: { left: 20 } })));
+    if (exam.fontSize) out.fontSize = exam.fontSize; // in theo cỡ chữ của đề gốc
     return out;
   };
 

@@ -91,7 +91,7 @@
         const def = {
           pageSize: 'A4',
           pageMargins: [15 * PT, 10 * PT, 10 * PT, 10 * PT],
-          defaultStyle: { font: 'Tinos', fontSize: 11, lineHeight: 0.94 },
+          defaultStyle: { font: 'Tinos', fontSize: model.fontSize || 11, lineHeight: 0.94 },
           content: convert(model),
           footer: (cur, total) => ({ text: (footerText ? footerText + ' – ' : '') + `Trang ${cur} / ${total}`, alignment: 'center', fontSize: 11, margin: [0, 2, 0, 0] }),
           info: { title: footerText || 'Đề kiểm tra', creator: 'Trộn đề kiểm tra' },

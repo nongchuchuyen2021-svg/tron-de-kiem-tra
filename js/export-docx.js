@@ -94,7 +94,7 @@
     const d = window.docx;
     const doc = new d.Document({
       creator: 'Trộn đề kiểm tra',
-      styles: { default: { document: { run: { font: 'Times New Roman', size: 22 } } } },
+      styles: { default: { document: { run: { font: 'Times New Roman', size: Math.round((model.fontSize || 11) * 2) } } } },
       sections: [{
         properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 567, bottom: 567, left: 851, right: 567, footer: 284 } } },
         footers: {

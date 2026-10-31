@@ -103,7 +103,7 @@
 
   R.readDocx = async function (file, onProgress) {
     const warnings = [];
-    let header = null;
+    let header = null, fontSize = null;
     onProgress && onProgress('Đang đọc tệp Word…');
     const buf = await file.arrayBuffer();
     let data = buf;
@@ -113,6 +113,7 @@
       if (f) {
         let xml = await f.async('string');
         header = R.docxHeader(xml);
+        fontSize = R.mainSize([...xml.matchAll(/<w:sz w:val="(\d+)"/g)].map((m) => [+m[1] / 2, 1]));
         let n = 0;
         const flat = (m) => {
           n++;
@@ -148,21 +149,64 @@
     const blocks = H.parseBlocks(res.value);
     if (!blocks.length) throw new Error('Tệp Word không có nội dung văn bản đọc được.');
     if (/<img/i.test(res.value)) warnings.push('Tệp có hình ảnh: hình được giữ cùng câu hỏi. Hãy xem lại ở danh sách câu hỏi.');
-    return { blocks, warnings, html: res.value, header };
+    return { blocks, warnings, html: res.value, header, fontSize };
+  };
+
+  /** Cỡ chữ chiếm nhiều nhất trong đề gốc. items: [[cỡ chữ, số ký tự]]. Trả về null nếu không xác định được. */
+  R.mainSize = function (items) {
+    const tally = {};
+    items.forEach(([size, n]) => { if (size >= 9 && size <= 14) tally[size] = (tally[size] || 0) + n; });
+    const best = Object.keys(tally).sort((a, b) => tally[b] - tally[a])[0];
+    return best ? +best : null;
   };
 
   /* ---------------- PDF ---------------- */
+  /** Dựng lại khối tiêu đề (trường/tổ bên trái, tên kỳ thi/môn/thời gian bên phải, dòng họ tên – lớp – mã đề)
+      từ các dòng chữ trang 1 của PDF, theo vị trí ngang. Trả về null nếu không nhận ra mẫu. */
+  R.pdfHeader = function (rows, pageW) {
+    const rowText = (r) => r.parts.map((x) => x.s).join(' ').replace(/\s+/g, ' ').trim();
+    const stop = rows.findIndex((r) => /^(PHẦN|Phần)\s+[IVXLC\d]+(?![A-Za-z])|^Câu\s*\d+/i.test(rowText(r)));
+    const head = stop < 0 ? [] : rows.slice(0, stop).filter((r) => rowText(r));
+    const idRow = head.slice().reverse().find((r) => /Họ\s*và\s*tên/i.test(rowText(r)));
+    if (!idRow) return null;
+    const top = head.slice(0, head.indexOf(idRow));
+    const left = [], right = [];
+    top.forEach((r) => {
+      const l = r.parts.filter((x) => x.x + x.w / 2 < pageW * 0.5).map((x) => x.s).join(' ').replace(/\s+/g, ' ').trim();
+      const rt = r.parts.filter((x) => x.x + x.w / 2 >= pageW * 0.5).map((x) => x.s).join(' ').replace(/\s+/g, ' ').trim();
+      if (l) left.push(l);
+      if (rt) right.push(rt);
+    });
+    if (!left.length || !right.length) return null;
+    const style = (t) => ({ b: !/^\(/.test(t) && !/^Thời gian/i.test(t) && ((/[A-ZÀ-Ỵ]/.test(t) && t === t.toUpperCase()) || /^(MÔN|NĂM HỌC)/i.test(t)), i: /^\(/.test(t) || /^Thời gian/i.test(t) });
+    const para = (t, align, o) => ({ k: 'p', runs: [Object.assign({ t: 'text', s: t, b: false, i: false }, o || style(t))], align, sb: 0, sa: 0 });
+    const idText = rowText(idRow);
+    const mm = /M[ãa]\s*đề\s*[:：]?\s*(\d{2,4})/i.exec(idText);
+    const W = 56.7;
+    return [
+      { k: 'table', border: 'none', cols: [4900 / W, 5588 / W], rows: [{ cells: [{ blocks: left.map((t) => para(t, 'center')) }, { blocks: right.map((t) => para(t, 'center')) }] }] },
+      { k: 'table', border: 'none', cols: [5200 / W, 2788 / W, 2500 / W], rows: [{ cells: [
+        { blocks: [para('Họ và tên: ........................................', 'left')] },
+        { blocks: [para('Lớp: ..............', 'left')] },
+        { blocks: [para(mm ? 'Mã đề ' + mm[1] : 'Mã đề', 'center', { b: true, i: false })] },
+      ] }] },
+    ];
+  };
+
   R.readPdf = async function (file, onProgress) {
     if (typeof pdfjsLib === 'undefined') throw new Error('Thư viện đọc PDF chưa tải được.');
     const buf = await file.arrayBuffer();
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
     const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
     const lines = [];
+    let header = null;
+    const sizes = [];
     for (let p = 1; p <= pdf.numPages; p++) {
       onProgress && onProgress(`Đang đọc PDF: trang ${p}/${pdf.numPages}…`);
       const page = await pdf.getPage(p);
       const tc = await page.getTextContent();
       const items = tc.items.filter((it) => it.str !== undefined && it.transform);
+      items.forEach((it) => sizes.push([Math.round(Math.abs(it.transform[3]) * 2) / 2, it.str.length]));
       items.sort((a, b) => (Math.abs(b.transform[5] - a.transform[5]) > 3 ? b.transform[5] - a.transform[5] : a.transform[4] - b.transform[4]));
       let cur = null;
       const rows = [];
@@ -171,8 +215,9 @@
         if (!cur || Math.abs(cur.y - y) > 3) { cur = { y, parts: [] }; rows.push(cur); }
         cur.parts.push({ x, w: it.width || 0, s: it.str });
       });
+      rows.forEach((r) => r.parts.sort((a, b) => a.x - b.x));
+      if (p === 1) header = R.pdfHeader(rows, page.view[2] - page.view[0]);
       rows.forEach((r) => {
-        r.parts.sort((a, b) => a.x - b.x);
         let s = '';
         let prevEnd = null;
         r.parts.forEach((pt) => {
@@ -196,6 +241,8 @@
     return {
       blocks: R.textToBlocks(rawText),
       rawText,
+      header,
+      fontSize: R.mainSize(sizes),
       warnings: ['Đọc từ PDF: hình ảnh, bảng biểu và công thức không được trích xuất. Nếu đề có hình/bảng, hãy dùng tệp Word (.docx).'],
     };
   };
