@@ -24,7 +24,7 @@
     let buf = [];
     const flush = () => {
       if (!buf.length) return;
-      const node = { text: buf, alignment: b.align === 'justify' ? 'justify' : b.align || 'left', margin: [(b.ind && b.ind.left ? b.ind.left * PT : 0), (b.sb || 0), 0, (b.sa || 0) + 1.5] };
+      const node = { text: buf, alignment: b.align === 'justify' ? 'justify' : b.align || 'left', margin: [(b.ind && b.ind.left ? b.ind.left * PT : 0), (b.sb || 0), 0, (b.sa || 0)] };
       parts.push(node);
       buf = [];
     };
@@ -49,7 +49,7 @@
       const cells = [];
       r.cells.forEach((c) => {
         const stack = convert(c.blocks.length ? c.blocks : [{ k: 'p', runs: [] }]);
-        const cell = { stack, margin: [1, 1, 1, 1] };
+        const cell = { stack, margin: [1, 0, 1, 0] };
         if (c.shade) cell.fillColor = '#' + c.shade;
         if (c.border === 'box') cell.border = [true, true, true, true];
         if (c.align) cell.alignment = c.align;
@@ -62,9 +62,9 @@
     return {
       table: { widths: b.cols.map((w) => w * PT), body, dontBreakRows: true, keepWithHeaderRows: 0 },
       layout: noBorder
-        ? { hLineWidth: (i, node) => (hasBox ? 0.7 : 0), vLineWidth: () => (hasBox ? 0.7 : 0), hLineColor: () => '#000', vLineColor: () => '#000', paddingLeft: () => 3, paddingRight: () => 3, paddingTop: () => 2, paddingBottom: () => 2 }
+        ? { hLineWidth: (i, node) => (hasBox ? 0.7 : 0), vLineWidth: () => (hasBox ? 0.7 : 0), hLineColor: () => '#000', vLineColor: () => '#000', paddingLeft: () => 3, paddingRight: () => 3, paddingTop: () => 0, paddingBottom: () => 0 }
         : { hLineWidth: () => 0.6, vLineWidth: () => 0.6, hLineColor: () => '#000', vLineColor: () => '#000', paddingLeft: () => 3, paddingRight: () => 3, paddingTop: () => 2, paddingBottom: () => 2 },
-      margin: [0, 0, 0, 4],
+      margin: [0, 0, 0, 0.5],
     };
   }
 
@@ -76,7 +76,7 @@
       else if (b.k === 'keep') {
         const inner = convert(b.blocks);
         const long = b.blocks.length > 14;
-        out.push(long ? { stack: inner, margin: [0, 0, 0, 3] } : { stack: inner, unbreakable: true, margin: [0, 0, 0, 3] });
+        out.push(long ? { stack: inner, margin: [0, 0, 0, 0.5] } : { stack: inner, unbreakable: true, margin: [0, 0, 0, 0.5] });
       } else if (b.k === 'pagebreak') out.push({ text: '', pageBreak: 'after' });
     });
     return out;
@@ -90,10 +90,10 @@
         pdfMake.fonts = { Tinos: { normal: 'Tinos-Regular.ttf', bold: 'Tinos-Bold.ttf', italics: 'Tinos-Italic.ttf', bolditalics: 'Tinos-BoldItalic.ttf' } };
         const def = {
           pageSize: 'A4',
-          pageMargins: [20 * PT, 15 * PT, 20 * PT, 17 * PT],
-          defaultStyle: { font: 'Tinos', fontSize: 12, lineHeight: 1.12 },
+          pageMargins: [15 * PT, 10 * PT, 10 * PT, 10 * PT],
+          defaultStyle: { font: 'Tinos', fontSize: 11, lineHeight: 0.94 },
           content: convert(model),
-          footer: (cur, total) => ({ text: (footerText ? footerText + ' – ' : '') + `Trang ${cur} / ${total}`, alignment: 'center', fontSize: 10, margin: [0, 8, 0, 0] }),
+          footer: (cur, total) => ({ text: (footerText ? footerText + ' – ' : '') + `Trang ${cur} / ${total}`, alignment: 'center', fontSize: 11, margin: [0, 2, 0, 0] }),
           info: { title: footerText || 'Đề kiểm tra', creator: 'Trộn đề kiểm tra' },
         };
         pdfMake.createPdf(def).getBlob((blob) => resolve(blob));

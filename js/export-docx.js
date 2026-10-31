@@ -30,7 +30,7 @@
       alignment: al,
       keepNext: !!b.keepNext,
       keepLines: true,
-      spacing: { before: Math.round((b.sb || 0) * 20), after: Math.round((b.sa || 0) * 20) + 40, line: 276 },
+      spacing: { before: Math.round((b.sb || 0) * 20), after: Math.round((b.sa || 0) * 20), line: 240 },
       indent: b.ind && b.ind.left ? { left: Math.round(b.ind.left * TW_MM) } : undefined,
       children: b.runs.map((r) => run(r, b)),
     });
@@ -57,7 +57,7 @@
             columnSpan: span > 1 ? span : undefined,
             shading: c.shade ? { type: d.ShadingType.CLEAR, color: 'auto', fill: c.shade } : undefined,
             borders: bd,
-            margins: { top: 40, bottom: 40, left: 80, right: 80 },
+            margins: { top: 0, bottom: 0, left: 60, right: 60 },
             verticalAlign: d.VerticalAlign.CENTER,
             children: blocks(c.blocks.length ? c.blocks : [{ k: 'p', runs: [] }], keepNext),
           });
@@ -76,13 +76,13 @@
     const out = [];
     list.forEach((b) => {
       if (b.k === 'p') out.push(para(keepAll ? Object.assign({}, b, { keepNext: true }) : b));
-      else if (b.k === 'table') { out.push(table(b, keepAll)); out.push(new window.docx.Paragraph({ spacing: { after: 0, line: 120 }, children: [] })); }
+      else if (b.k === 'table') { out.push(table(b, keepAll)); out.push(new window.docx.Paragraph({ spacing: { after: 0, line: 40 }, children: [] })); }
       else if (b.k === 'keep') {
         const items = b.blocks;
         items.forEach((x, i) => {
           const last = i === items.length - 1;
           if (x.k === 'p') out.push(para(last ? x : Object.assign({}, x, { keepNext: true })));
-          else if (x.k === 'table') { out.push(table(x, !last)); out.push(new window.docx.Paragraph({ spacing: { after: 0, line: 120 }, keepNext: !last, children: [] })); }
+          else if (x.k === 'table') { out.push(table(x, !last)); out.push(new window.docx.Paragraph({ spacing: { after: 0, line: 40 }, keepNext: !last, children: [] })); }
         });
       } else if (b.k === 'pagebreak') out.push(new window.docx.Paragraph({ children: [new window.docx.PageBreak()] }));
     });
@@ -94,18 +94,18 @@
     const d = window.docx;
     const doc = new d.Document({
       creator: 'Trộn đề kiểm tra',
-      styles: { default: { document: { run: { font: 'Times New Roman', size: 24 } } } },
+      styles: { default: { document: { run: { font: 'Times New Roman', size: 22 } } } },
       sections: [{
-        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1134, right: 1134 } } },
+        properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 567, bottom: 567, left: 851, right: 567, footer: 284 } } },
         footers: {
           default: new d.Footer({
             children: [new d.Paragraph({
               alignment: d.AlignmentType.CENTER,
               children: [
-                new d.TextRun({ text: (footerText ? footerText + ' – ' : '') + 'Trang ', size: 20 }),
-                new d.TextRun({ children: [d.PageNumber.CURRENT], size: 20 }),
-                new d.TextRun({ text: ' / ', size: 20 }),
-                new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 20 }),
+                new d.TextRun({ text: (footerText ? footerText + ' – ' : '') + 'Trang ', size: 22 }),
+                new d.TextRun({ children: [d.PageNumber.CURRENT], size: 22 }),
+                new d.TextRun({ text: ' / ', size: 22 }),
+                new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 22 }),
               ],
             })],
           }),

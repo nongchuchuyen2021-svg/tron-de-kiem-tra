@@ -65,14 +65,20 @@
     });
   }
 
-  function preprocess(blocks) {
+  function preprocess(blocks, notes) {
     const out = [];
+    let ended = false;
     blocks.forEach((b) => {
       if (b.kind === 'table') { out.push(b); return; }
       const nb = Object.assign({}, b);
       nb.html = H.trimHtml(nb.html || '');
       nb.text = H.textOf(nb.html);
-      if (/^[\s\-–—_*.]*HẾT[\s\-–—_*.]*$/i.test(nb.text)) return;
+      if (/^[\s\-–—_*.]*HẾT[\s\-–—_*.]*$/i.test(nb.text)) { ended = true; return; }
+      // dòng ghi chú cuối đề (sau "HẾT"): không thuộc câu hỏi nào, giữ riêng để in lại cuối đề
+      if (ended && notes) {
+        if (/^\s*[-–—•*]\s*\S/.test(nb.text)) { notes.push(nb.text.replace(/^\s*[-–—•*]\s*/, '').trim()); return; }
+        if (nb.text.trim()) ended = false; // gặp nội dung khác (vd. tiêu đề đáp án): hết phần ghi chú
+      }
       if (!nb.text.trim() && !H.hasImg(nb.html)) return;
       splitInlineOptions(nb).forEach((x) => out.push(x));
     });
@@ -101,7 +107,7 @@
     const joined = lines.join('\n');
     let m;
     if ((m = /Thời gian(?: làm bài)?\s*[:\-]?\s*(\d+)\s*phút/i.exec(joined))) meta.time = m[1] + ' phút';
-    if ((m = /Môn\s*[:\-]?\s*([^\n,;–—(]+?)(?:\s*[-–—,]\s*Lớp|\s*Lớp|\n|$)/i.exec(joined))) meta.subject = m[1].trim();
+    if ((m = /Môn\s*[:\-]?\s*([^\n,;–—(]+?)(?:\s*[-–—,]\s*Lớp|\s*Lớp|\s*Thời gian|\s*Họ và tên|\n|$)/i.exec(joined))) meta.subject = m[1].trim();
     if ((m = /Lớp\s*[:\-]?\s*(\d{1,2})/i.exec(joined))) meta.grade = m[1];
     if ((m = /Năm học\s*[:\-]?\s*(\d{4}\s*[-–—]\s*\d{4})/i.exec(joined))) meta.year = m[1].replace(/\s/g, '');
     const school = lines.find((l) => /^(TRƯỜNG|SỞ|THPT|TRUNG TÂM)\b/i.test(l.trim()) && l.length < 80);
@@ -117,7 +123,8 @@
    */
   P.parse = function (blocksIn) {
     const warnings = [];
-    const blocks = preprocess(blocksIn);
+    const footerNotes = [];
+    const blocks = preprocess(blocksIn, footerNotes);
 
     // tách phần đáp án ở cuối đề (nếu có)
     let ansIdx = -1, qSeen = 0;
@@ -382,7 +389,9 @@
     questions.forEach((q) => q.flags.forEach((f) => warnings.push(`Câu ${q.n}: ${f}`)));
 
     const meta = extractMeta(preamble.map((b) => b.text || ''));
-    return { parts, questions, groups, answerBlocks, warnings, meta, numbering };
+    const sepM = blocks.map((b) => (b.kind !== 'table' && RE_Q.exec(b.text)) || null).find(Boolean);
+    const labelSep = sepM && /^\s*Câu\s*\d+\s*:/i.test(sepM[0]) ? ':' : '.';
+    return { parts, questions, groups, answerBlocks, warnings, meta, numbering, footerNotes, labelSep };
   };
 
   /* ---------------------------------------------------------------------------------

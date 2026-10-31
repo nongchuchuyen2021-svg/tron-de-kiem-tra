@@ -2,7 +2,7 @@
    Cùng một mô hình được dùng cho Word (export-docx.js) và PDF (export-pdf.js) để nội dung giống nhau. */
 (function (g) {
   const D = {};
-  const W = 170; // bề rộng nội dung (mm)
+  const W = 185; // bề rộng nội dung (mm): A4, lề trái 15 mm, lề phải 10 mm
   D.W = W;
 
   const T = (s, o) => Object.assign({ t: 'text', s }, o);
@@ -22,6 +22,20 @@
   });
 
   /* ---- Tiêu đề đề thi ---- */
+  /** Tiêu đề lấy từ đề gốc: sao chép nguyên khối, chỉ thay số mã đề. */
+  function templateHeader(tpl, code) {
+    let found = false;
+    const fix = (b) => {
+      if (b.k === 'p') return Object.assign({}, b, { runs: b.runs.map((r) => (r.t === 'text' && /Mã đề\s*:?\s*\d+/i.test(r.s) ? (found = true, Object.assign({}, r, { s: r.s.replace(/(Mã đề\s*:?\s*)\d+/i, '$1' + code) })) : r)) });
+      if (b.k === 'table') return Object.assign({}, b, { rows: b.rows.map((r) => ({ cells: r.cells.map((c) => Object.assign({}, c, { blocks: c.blocks.map(fix) })) })) });
+      return b;
+    };
+    const out = tpl.map(fix);
+    if (!found) out.push(P([T('Mã đề ' + code, { b: true })], { align: 'right' }));
+    out.push(P([], { sa: 2 }));
+    return out;
+  }
+
   function headerBlocks(meta, code) {
     const left = [];
     if (meta.dept) left.push(P([T(meta.dept.toUpperCase())], { align: 'center' }));
@@ -57,12 +71,12 @@
     const len = Math.max(...list.map((o) => (simple ? o.blocks[0].runs.reduce((s, r) => s + r.s.length, 0) : 999)));
     const mk = (o) => H.prefix(o.blocks, [T(o.label, { b: true })]);
     if (simple && len <= 16 && list.length === 4) {
-      return [{ k: 'table', border: 'none', cols: [42.5, 42.5, 42.5, 42.5], rows: [{ cells: list.map((o) => ({ blocks: mk(o) })) }] }];
+      return [{ k: 'table', border: 'none', cols: [46.25, 46.25, 46.25, 46.25], rows: [{ cells: list.map((o) => ({ blocks: mk(o) })) }] }];
     }
     if (simple && len <= 42 && list.length % 2 === 0) {
       const rows = [];
       for (let i = 0; i < list.length; i += 2) rows.push({ cells: [{ blocks: mk(list[i]) }, { blocks: mk(list[i + 1]) }] });
-      return [{ k: 'table', border: 'none', cols: [85, 85], rows }];
+      return [{ k: 'table', border: 'none', cols: [92.5, 92.5], rows }];
     }
     const out = [];
     list.forEach((o) => mk(o).forEach((b) => out.push(b.k === 'p' ? Object.assign({}, b, { ind: { left: 4 } }) : b)));
@@ -70,9 +84,10 @@
   }
 
   function questionBlocks(exam, q, item, opts) {
-    const label = [T(`Câu ${item.num}. `, { b: true })];
+    const label = [T(`Câu ${item.num}${exam.labelSep === ':' ? ':' : '.'} `, { b: true })];
     if (opts.showPoints || q.type === 'essay') if (q.points != null) label.push(T(`(${U.fmt(q.points)} điểm) `, { i: true }));
     const out = H.prefix(H.toBlocks(q.stem), label);
+    if (out[0] && out[0].k === 'p' && !out[0].sb) out[0] = Object.assign({}, out[0], { sb: 1 });
     if (q.type === 'mcq') out.push(...optionsBlocks(q, item, opts));
     else if (q.type === 'tf') {
       item.stmtOrder.forEach((sid, k) => {
@@ -95,14 +110,18 @@
   /** Đề cho học sinh (không có đáp án). */
   D.examModel = function (exam, version, meta, opts) {
     opts = opts || {};
-    const out = headerBlocks(meta, version.code);
+    const out = exam.header && !(meta && meta.useDefaultHeader) ? templateHeader(exam.header, version.code) : headerBlocks(meta, version.code);
     let lastPart = null, lastGroup = null;
     version.items.forEach((item, idx) => {
       const q = exam.questions.find((x) => x.id === item.qid);
       const part = exam.parts.find((p) => p.id === q.part);
       if (part.id !== lastPart) {
-        out.push(P([T(partTitle(part), { b: true })], { sb: 8, sa: 2, keepNext: true }));
-        part.intro.forEach((h) => H.toBlocks(h).forEach((b) => out.push(Object.assign({}, b, { keepNext: true, runs: b.runs.map((r) => (r.t === 'text' ? Object.assign({}, r, { i: true }) : r)) }))));
+        // tiêu đề phần: phần đầu ("PHẦN I. Câu trắc nghiệm...") in đậm, phần lời dẫn cùng đoạn in thường như đề gốc
+        const title = partTitle(part);
+        const hm = /^((?:PHẦN|Phần)\s+[IVXLC\d]+\.\s*[^.]*\.)\s*(.*)$/.exec(title);
+        out.push(P(hm && hm[2] ? [T(hm[1] + ' ', { b: true }), T(hm[2])] : [T(title, { b: true })], { sb: 3, sa: 0, keepNext: true, align: 'justify' }));
+        const headFold = U.fold(title);
+        part.intro.filter((h) => !headFold.includes(U.fold(H.textOf(h)))).forEach((h) => H.toBlocks(h).forEach((b) => out.push(Object.assign({}, b, { keepNext: true, runs: b.runs.map((r) => (r.t === 'text' ? Object.assign({}, r, { i: true }) : r)) }))));
         lastPart = part.id; lastGroup = null;
       }
       const keep = [];
@@ -115,7 +134,8 @@
       out.push({ k: 'keep', blocks: keep });
       void idx;
     });
-    out.push(P([T('— HẾT —', { i: true })], { align: 'center', sb: 10 }));
+    out.push(P([T('— HẾT —', { i: true })], { align: 'center', sb: 4 }));
+    (exam.footerNotes || []).forEach((n) => out.push(P([T('-   ' + n)], { ind: { left: 20 } })));
     return out;
   };
 
